@@ -1,5 +1,12 @@
 # model dispersal
 
+# Probabilities don't seem quite right, the totals don't add to one, more seeds are being dispersed than specified
+# by production function.
+# Need to test with different parameters
+# Nothing is discrete, incorporate stochasticity? 
+# Ways to incorporate patchiness -- can "kill" seeds in specific patches
+# Can "kill" seeds in random patches to model "fuzziness" in habitat suitability
+
 #########################################################
 
 # parameters
@@ -12,7 +19,7 @@ alpha <- .1
 m <- 0.3
 #starting population
 N_0 <- 100
-#number of generations to simulate
+#number of generations to simulate (I don't use this so far, need to figure out how to automate whole simulation)
 g_max <- 10
 #number of patches
 patch<-10
@@ -55,7 +62,7 @@ for (i in dvect){
   }
 }
 
-#Convert to Matrix
+#Convert to Matrix (ROWS DON'T ADD TO 1?)
 dprob<-matrix(dprobv,nrow = patch, ncol = patch) 
 
 ##########################################################
@@ -101,6 +108,8 @@ for (i in 1:patch){
 
 #populate next row of N_i
 N_i<-rbind(N_i,tdisp)
+
+###############################################################
 
 
 #OLD WAY BUT WRONG WAY???
