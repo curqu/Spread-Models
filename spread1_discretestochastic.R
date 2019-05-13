@@ -10,7 +10,7 @@ alpha <- .1
 m <- 0.3
 #starting population
 N_0 <- 10
-#number of generations to simulate (I don't use this so far, need to figure out how to automate whole simulation)
+#number of generations to simulate 
 g_max <- 10
 #number of patches
 patch<-10
@@ -37,28 +37,32 @@ gNty <- function(j){
 #   return(k)
 }
 
-#Stochastic Dispersal function
-disperse <- function(x,y){
+#Stochastic Dispersal function 
+#right now this can only cope with integer distances. I think I can define buckets of each patch 
+#if there are looser bounds ie some defined interval that is considered "in the patch" then I can extend to 
+#smaller distances between patches. The way this works now, a 1 unit distance between patches is continuous
+#gaps are created with the distance vector.
+disperse <- function(x,y){ #x is the number of seeds, y is the index of the starting patch
   pmove<-vector("numeric",patch)
-  if (x==0)
-    return(pmove)
-  else
-    distance<-round(rexp(x,m),0)
-    direction<-rbinom(x,1,0.5)
-    for (i in 1:x){
+  if (x==0) #need this to cope with NA
+    return(pmove) #if there are no seeds, produce a vector of zeros
+  else #if there are seeds, we disperse them
+    distance<-round(rexp(x,m),0) #if I make "buckets" this can output a real value vs. integer
+    direction<-rbinom(x,1,0.5) #this decided if seeds move forwards or back
+    for (i in 1:x){ #this refactors direction to 1,-1
      if (direction[i]==0)
         direction[i]<- -1
    }
-   move<-distance*direction
-   for (i in 1:x){
-     for (j in 1:patch){
-        if (move[i]==pwdist[y,j])
-          pmove[j]<-pmove[j]+1    
+   move<-distance*direction #this combines distance and direction
+   for (i in 1:x){ #this moves seeds to their new home, x is number of seeds, compute for each seed 
+     for (j in 1:patch){ #this finds the corresponding home for each seed 
+        if (move[i]==pwdist[y,j]) #from the random output and pairwise distance matrix
+          pmove[j]<-pmove[j]+1    #adds one to appropriate entry in vector if that is where a seed lands
       }
    }
-   return(pmove)
+   return(pmove) #vector of dispersed seeds
   
-}
+} #this might make sense to break into helper functions
 
 ##########################################################
 
@@ -92,11 +96,10 @@ for (i in 1:patch){
 
 #Run Simulation
 
-for (i in 1:(g_max-1)){
-  seedsp<-gNty(spread[i,])
-  # moves<-sapply(seedsp,disperse) 
-  for (j in 1:patch){
+for (i in 1:(g_max-1)){ #for each generation
+  seedsp<-gNty(spread[i,]) #make seeds
+  for (j in 1:patch){ #disperse seeds
     seedsd[j,]<-disperse(seedsp[j],j)
   }
-  spread[i+1,]<-apply(seedsd,2,sum)
+  spread[i+1,]<-apply(seedsd,2,sum) #fill in next row in population matrix
 }
