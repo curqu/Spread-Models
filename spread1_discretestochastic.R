@@ -13,11 +13,11 @@ N_0 <- 10
 #number of generations to simulate 
 g_max <- 10
 #number of patches
-patch<-10
+patch <- 50
 #distance between patches vector
-dpatch<- 1
+dpatch <- 1
 #Define distance vector (for now must be integer distances between patches)
-dvect<-seq(from=0,length.out = patch,by=dpatch)
+dvect <- seq(from=0,length.out = patch,by=dpatch)
 
 ##########################################################
 
@@ -35,15 +35,15 @@ gNty <- function(j){
 # ker <- function(x,y){
 #   k <-(m/2)*exp(-m*abs(x-y))
 #   return(k)
-}
+#}
 
-#Stochastic Dispersal function 
+#Stochastic Dispersal function TESTED AND IT WORKS :D
 #right now this can only cope with integer distances. I think I can define buckets of each patch 
 #if there are looser bounds ie some defined interval that is considered "in the patch" then I can extend to 
 #smaller distances between patches. The way this works now, a 1 unit distance between patches is continuous
 #gaps are created with the distance vector.
 disperse <- function(x,y){ #x is the number of seeds, y is the index of the starting patch
-  pmove<-vector("numeric",patch)
+  pmove <- vector("numeric",patch)
   if (x==0) #need this to cope with NA
     return(pmove) #if there are no seeds, produce a vector of zeros
   else #if there are seeds, we disperse them
@@ -103,3 +103,4 @@ for (i in 1:(g_max-1)){ #for each generation
   }
   spread[i+1,]<-apply(seedsd,2,sum) #fill in next row in population matrix
 }
+

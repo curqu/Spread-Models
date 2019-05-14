@@ -1,0 +1,123 @@
+---
+title: 'Describing the Spread Model: spread1_discretestochastic.R'
+author: "Carla Urquhart"
+date: "May 14, 2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# General Description
+
+This model describes spread for an annual plant across a simulated one-dimensional landscape. Population is discretized by rounding. Seed production is deterministic, based on the function described in Pachepsky & Levine (2011). Dispersal is stochastic, using randomly generated variates from a negative exponential distribution to determine dispersal distance, and random variates from a binomial distribution to determine dispersal direction. The user can define a homogenous or heterogeneous landscape, I will present an example of each below. Currently, the model does not include an Allee effect, and the examples do not vary parameters for intraspecific competition or fecundity. 
+
+## Parameters
+
+There are 7 required input parameters. Three of these define the population's ability to reproduce and disperse: representing: fecundity ($\alpha$), intrinsic population growth rate ($\lambda$), dispersal distance decay rate ($m$). The parameters $g_{max}$ and $N_0$ define the number of generations to simulate and the initial population, respectively. The final two parameters determine the landscape that the population spreads across: the number of patches and the distance between them. For the current version, these distances need to be integer values. A distance parameter of 1 defines a heterogeneous landscape. Larger values create a patchy landscape. Note that the number of patches refers to habitable patches, this model excludes gaps from the results, so matrix output coloumns represent suitable patches. The distance vector contains information about the gaps between patches. The final entry in the parameters section "dvect" creates a vector of distances from the origin based on the above two landscape parameters. It will define a vector of patches of length 1 with gaps defined by the user input distance parameter. It is possible to define this vector manually to simulate spatial variation in patch and gap length.
+
+## How it Works
+
+The model iterates calls to two functions: one that produces seeds and one that disperses them. The seed production function: "gNty(x)", is derived from the seed production function in Pachepsky & Levine (2011). For each patch's population ($j$), it computes the quantity of seeds produced, call it $S$, so that we have: $$S = \frac{\lambda\cdot j}{1+\alpha\cdot j}$$. The outputs $S_i$ are stored as a vector, so that the index corresponds to the index of the patch they are produced in.  
+
+The second function is "disperse(x,y)", where $x$ is the number of seeds produced and $y$ is the index of their originating patch, it outputs a vector describing where the seeds from patch $y$ disperse to. This function is run iteratively on the vector of seeds, and results are summed across each iteration to determine the distribution of the population at the next time step. This function could probably be broken into several functions with more implicit loop structures to improve efficiency. As it is written however, it incorporates several steps, which I will outline. First, it randomly generates a vector of distances that are variates from a negative exponential distribution. The entries describe the distance that each seed will travel. Then, it generates a vector of values: 1 or -1 to describe whether each seed moves forward or back. These vectors are combined to produce a vector of distances each seed produced will travel from its starting patch. Then, the function loops through the seeds and a pairwise-distance matrix, placing each seed in a new patch that is defined as the patch where its distance matches the distance described in the corresponding matrix entry. It is worth noting that seeds which have distances that are not described in the pair-wise distance matrix are "lost". This occurs for seeds that disperse outside the bounds of the spread matrix (for example if a seed disperses -3 from patch 1) as well as those seeds that fall into "gaps" of a heterogenous landscape. For example, if the distance between patches is 2, and a seed disperses with distance 1 from any patch, it is lost, as it has fallen into a "gap". 
+
+For each timestep $t_i$, a vector is produced that represents the total number of seeds dispersed to each patch, this vector is input into the $i$th row of the spread matrix, so that the output matrix has rows that represent each timestep, and coloumns that correspond to habitable patches. The distance vector can be row-bound to the spread matrix to explicitly show distances between patches, but this is not incorporated into the simulation.
+
+#Example: Spread through a continuous landscape
+
+In this example, the following parameters were set to simulate spread in a homogenous landscape
+
+```{r, include=TRUE}
+#intrinsic rate of increase 
+lambda <- 10
+#intraspecific competition
+alpha <- .1
+#distance decay rate
+m <- 0.3
+#starting population
+N_0 <- 10
+#number of generations to simulate 
+g_max <- 10
+#number of patches
+patch <- 50
+#distance between patches vector
+dpatch <- 1
+#Define distance vector (for now must be integer distances between patches)
+dvect <- seq(from=0,length.out = patch,by=dpatch)
+```
+
+The pair-wise distance matrix for dispersal is generated. Here is an image representing pair-wise distances where blue cells are positive distance and red cells are negative distance. These values are used to place dispersing seeds into appropriate patches. Here, there are no gaps and thus the distance matrix is diagonal.
+
+
+```{r echo=FALSE}
+library(RColorBrewer)
+#seed production function (now discrete)
+gNty <- function(j){
+  seeds<-vector()
+  jnext<-(lambda*j)/(1+alpha*j)
+  seeds<-c(seeds,jnext)
+  return(round(seeds,0))
+}
+
+#dispersal kernel old 
+# ker <- function(x,y){
+#   k <-(m/2)*exp(-m*abs(x-y))
+#   return(k)
+#}
+
+#Stochastic Dispersal function TESTED AND IT WORKS :D
+#right now this can only cope with integer distances. I think I can define buckets of each patch 
+#if there are looser bounds ie some defined interval that is considered "in the patch" then I can extend to 
+#smaller distances between patches. The way this works now, a 1 unit distance between patches is continuous
+#gaps are created with the distance vector.
+disperse <- function(x,y){ #x is the number of seeds, y is the index of the starting patch
+  pmove <- vector("numeric",patch)
+  if (x==0) #need this to cope with NA
+    return(pmove) #if there are no seeds, produce a vector of zeros
+  else #if there are seeds, we disperse them
+    distance<-round(rexp(x,m),0) #if I make "buckets" this can output a real value vs. integer
+    direction<-rbinom(x,1,0.5) #this decided if seeds move forwards or back
+    for (i in 1:x){ #this refactors direction to 1,-1
+     if (direction[i]==0)
+        direction[i]<- -1
+   }
+   move<-distance*direction #this combines distance and direction
+   for (i in 1:x){ #this moves seeds to their new home, x is number of seeds, compute for each seed 
+     for (j in 1:patch){ #this finds the corresponding home for each seed 
+        if (move[i]==pwdist[y,j]) #from the random output and pairwise distance matrix
+          pmove[j]<-pmove[j]+1    #adds one to appropriate entry in vector if that is where a seed lands
+      }
+   }
+   return(pmove) #vector of dispersed seeds
+  
+} #this might make sense to break into helper functions
+
+# Initialize matrices for storing data
+
+#Population Spread Matrix
+#Adds values to each row for each generation
+#Coloumns correspond to patches defined by dvect
+spread<-matrix(0,g_max,patch)
+spread[1,1]<-N_0
+
+#Seeds Dispersed
+#vector for storing seeds produced, resets each generation
+seedsp<-vector("numeric", patch)
+#matrix containing number of plants/seeds in each patch after dispersal
+#rows are originating patches where seeds were produced,
+#coloumns are where they disperse to
+seedsd<-matrix(0,patch,patch)
+
+#Pairwise Distances Matrix
+#Distances between patch i,j for row i 
+#and coloumn j
+pwdist<-matrix(NA,patch,patch)
+for (i in 1:patch){
+  for (j in 1:patch){
+    pwdist[i,j]<-dvect[j]-dvect[i]
+  }
+}
+image(pwdist, col=brewer.pal(11,'RdYlBu'), breaks=c(-49,-39,-29,-19,-9,-1,0,9,19,29,39,49), xlab="Originating Patch",ylab="Patch to Disperse to")
+```
+
+
