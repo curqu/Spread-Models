@@ -121,3 +121,98 @@ image(pwdist, col=brewer.pal(11,'RdYlBu'), breaks=c(-49,-39,-29,-19,-9,-1,0,9,19
 ```
 
 
+
+```{r, include=FALSE}
+####################################################################
+
+#Run Simulation
+
+for (i in 1:(g_max-1)){ #for each generation
+  seedsp<-gNty(spread[i,]) #make seeds
+  for (j in 1:patch){ #disperse seeds
+    seedsd[j,]<-disperse(seedsp[j],j)
+  }
+  spread[i+1,]<-apply(seedsd,2,sum) #fill in next row in population matrix
+}
+
+```
+
+For this example, the simulation runs over 10 generations, the output matrix has each generation represented by a row. Here, we can see how the population spreads over the time steps when the population starts at the furthest left patch. We can see that the spread progresses as a travelling wave as expected over a homogenous landscape, before the distribution tends to stabilize. Populations at the back of the invasion do not grow as large as the middle patches due to edge effects. Note that the furthest patch is colonized by 1 individual in the 6th generation. 
+
+```{r, echo=FALSE}
+plot(spread[2,], type='l', col="cyan",ylim=c(0,150), main="Invasion through 10 Generations", xlab="Patch Index",ylab="Population")
+lines(spread[3,], col="darkgreen" )
+lines(spread[4,], col="darkorange3")
+lines(spread[5,], col="chartreuse4")
+lines(spread[6,], col="deepskyblue3")
+lines(spread[7,], col="blueviolet")
+lines(spread[8,], col="blue")
+lines(spread[9,], col="red")
+lines(spread[10,], col="black")
+legend("topleft", legend=c("Gen. 2", "Gen. 3", "Gen. 4", "Gen. 5", "Gen. 6", "Gen. 7", "Gen. 8", "Gen. 9", "Gen. 10"), col=c("cyan","darkgreen","darkorange3","chartreuse4","deepskyblue3","blueviolet","blue","red","black"), lty=1, ncol=5,seg.len=1.62)
+distancepgen<-c(6,19,9,6,9)
+```
+
+# Example: Spread across a gap
+
+Here, we will add a gap in our continuous landscape. In the previous example, we found that the average distance the leading edge moved each generation was 9.8 patches. For this example, we will create a 20 unit "gap" in the middle of our landscape, to simulate an invasion where dispersal across this gap would be difficult. We will do this by defining the distance vector manually, to include 25 continuous patches (distance=1), and patch 26 will have a distance value of 45, followed by continuous patches to the edge of our simulated landscape. All the other parameters will be the same as above. Below is a representation of the pair-wise distance matrix for this example's patches, as above blue is positive, red is negative and darker colours indicate further distances. We see a clear discontinuity between patch 25 and 26, which have a 20 unit gap between them.
+
+```{r,echo=FALSE}
+d1<-c(1:25)
+d2<-c(45:69)
+dvect<-c(d1,d2)
+
+#Population Spread Matrix
+#Adds values to each row for each generation
+#Coloumns correspond to patches defined by dvect
+spread<-matrix(0,g_max,patch)
+spread[1,1]<-N_0
+
+#Seeds Dispersed
+#vector for storing seeds produced, resets each generation
+seedsp<-vector("numeric", patch)
+#matrix containing number of plants/seeds in each patch after dispersal
+#rows are originating patches where seeds were produced,
+#coloumns are where they disperse to
+seedsd<-matrix(0,patch,patch)
+
+#Pairwise Distances Matrix
+#Distances between patch i,j for row i 
+#and coloumn j
+pwdist<-matrix(NA,patch,patch)
+for (i in 1:patch){
+  for (j in 1:patch){
+    pwdist[i,j]<-dvect[j]-dvect[i]
+  }
+}
+image(pwdist, col=brewer.pal(9,'RdYlBu'), breaks=c(-69,-49,-29,-9,-1,0,9,29,49,69), xlab="Originating Patch",ylab="Patch to Disperse to")
+```
+
+Recall that the simulation runs over 10 generations, and across 50 patches. The gap length is implicit in the results of the simulation. Based on previous work, we expect that patch 26 will not be colonized until the population at the leading edge of the invasion (particularly patch 25) is sufficient for a high the probability that one of the seeds will disperse a distance of 20.
+
+```{r, echo=FALSE}
+####################################################################
+
+#Run Simulation
+
+for (i in 1:(g_max-1)){ #for each generation
+  seedsp<-gNty(spread[i,]) #make seeds
+  for (j in 1:patch){ #disperse seeds
+    seedsd[j,]<-disperse(seedsp[j],j)
+  }
+  spread[i+1,]<-apply(seedsd,2,sum) #fill in next row in population matrix
+}
+
+plot(spread[2,], type='l', col="cyan",ylim=c(0,150), main="Invasion through 10 Generations", xlab="Patch Index",ylab="Population")
+lines(spread[3,], col="darkgreen" )
+lines(spread[4,], col="darkorange3")
+lines(spread[5,], col="chartreuse4")
+lines(spread[6,], col="deepskyblue3")
+lines(spread[7,], col="blueviolet")
+lines(spread[8,], col="blue")
+lines(spread[9,], col="red")
+lines(spread[10,], col="black")
+legend("topleft", legend=c("Gen. 2", "Gen. 3", "Gen. 4", "Gen. 5", "Gen. 6", "Gen. 7", "Gen. 8", "Gen. 9", "Gen. 10"), col=c("cyan","darkgreen","darkorange3","chartreuse4","deepskyblue3","blueviolet","blue","red","black"), lty=1, ncol=5,seg.len=1.62)
+```
+
+As we expected, there is no dispersal across the gap until the population at the leading edge of the invasion is sufficiently large. In generation 5, one propagule is dispersed to patch 27, which initiates spread through the second habitat. 
