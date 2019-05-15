@@ -31,12 +31,6 @@ gNty <- function(j){
   return(round(seeds,0))
 }
 
-#dispersal kernel old 
-# ker <- function(x,y){
-#   k <-(m/2)*exp(-m*abs(x-y))
-#   return(k)
-#}
-
 #Stochastic Dispersal function TESTED AND IT WORKS :D
 #right now this can only cope with integer distances. I think I can define buckets of each patch 
 #if there are looser bounds ie some defined interval that is considered "in the patch" then I can extend to 
@@ -63,6 +57,48 @@ disperse <- function(x,y){ #x is the number of seeds, y is the index of the star
    return(pmove) #vector of dispersed seeds
   
 } #this might make sense to break into helper functions
+
+
+#dispersal function second version -- refactored to remove unnecessary loops and seperate steps into helpers
+disperse2<-function(x,y){
+  pmove<-vector("numeric", patch)
+  if (x==0)
+    return(pmove)
+  else
+    move<-distance(x)*direction(x)
+  for (i in 1:x){ #this moves seeds to their new home, x is number of seeds, compute for each seed 
+    for (j in 1:patch){ #this finds the corresponding home for each seed 
+      place(move[i],pwdist[y,j],pmove[j])
+    }
+  }
+ return(pmove) 
+}
+#dispersal helper -- generate random distances
+distance<-function(x){
+  dist<-round(rexp(x,m),0)
+  return(dist)
+}
+
+#dispersal helper -- generate random directions
+direction<-function(x){
+  dir<-rbinom(x,1,0.5)
+  sapply(dir,refactor)
+}
+
+#direction helper -- refactor 0 to -1
+refactor<-function(x){
+  if (x==0)
+    x<- -1
+  else x
+}
+
+#disperse helper - places seed in new patch based on dispersal distance
+place<-function(x,y,z){
+  if (x==y)
+    z<-z+1
+  else
+    z
+}
 
 ##########################################################
 
