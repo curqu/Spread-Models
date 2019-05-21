@@ -1,0 +1,363 @@
+---
+title: "Comparing Populations with High and Low Dispersal Ability"
+author: "Carla Urquhart"
+date: "May 16, 2019"
+output: html_document
+---
+
+This example uses the same script as the general examples shown before, but modified so that we consider two sub-populations: one with high dispersal ability and one with low dispersal ability. The functions and parameters we use are the same, except that we change $m$ into a variable in the dispersal function, and set two parameters: $m_1$ and $m_2$, where $m_1>m_2$. Recall that $m$ defines the dispersal kernel and thus the mean dispersal distance. We expect that the population with the higher dispersal ability (lower $m$) will be the prevalent subpopulation at the leading edge of the invasion, and thst it will spread faster across the landscape.
+
+```{r, include=FALSE}
+#########################################################
+
+# parameters
+
+#intrinsic rate of increase 
+lambda <- 10
+#intraspecific competition
+alpha <- .1
+#distance decay rate (low mdd)
+m1 <- 1
+#distance decay rate (high mdd)
+m2<-0.8
+#starting population (small m)
+N_0 <- 10
+#starting population (big m)
+M_0<-2
+#number of generations to simulate 
+g_max <- 10
+#number of patches
+patch <- 100
+#distance between patches vector
+dpatch <- 1
+#Define distance vector (for now must be integer distances between patches)
+dvect <- seq(from=0,length.out = patch,by=dpatch)
+
+##########################################################
+#functions
+
+#seed production function (now discrete)
+gNty <- function(j){
+  seeds<-vector()
+  jnext<-(lambda*j)/(1+alpha*j)
+  seeds<-c(seeds,jnext)
+  return(round(seeds,0))
+}
+
+#dispersal function second version -- refactored to remove unnecessary loops and seperate steps into helpers
+disperse2<-function(x,y,m){
+  pmove<-vector("numeric", patch)
+  if (x==0)
+    return(pmove)
+  else
+    move<-distance(x,m)*direction(x)
+  for (i in 1:x){ #this moves seeds to their new home, x is number of seeds, compute for each seed 
+    for (j in 1:patch){ #this finds the corresponding home for each seed 
+     # place(move[i],pwdist[y,j],pmove[j])
+      if (move[i]==pwdist[y,j])
+      {pmove[j]<-pmove[j]+1}
+    }
+  }
+ return(pmove) 
+}
+#dispersal helper -- generate random distances
+distance<-function(x,m){
+  dist<-round(rexp(x,m),0)
+  return(dist)
+}
+
+#dispersal helper -- generate random directions
+direction<-function(x){
+  dir<-rbinom(x,1,0.5)
+  sapply(dir,refactor)
+}
+
+#direction helper -- refactor 0 to -1
+refactor<-function(x){
+  if (x==0)
+    x<- -1
+  else x
+}
+
+##########################################################
+
+# Initialize matrices for storing data
+
+#Population Spread Matrix
+#Adds values to each row for each generation
+#Coloumns correspond to patches defined by dvect
+spread<-matrix(0,g_max,patch)
+spread[1,50]<-N_0
+spreadhm<-matrix(0,g_max,patch)
+spreadhm[1,50]<-M_0
+
+
+#Seeds Dispersed
+#vector for storing seeds produced, resets each generation
+seedsp1<-vector("numeric", patch)
+seedsp2<-vector("numeric",patch)
+#matrix containing number of plants/seeds in each patch after dispersal
+#rows are originating patches where seeds were produced,
+#coloumns are where they disperse to
+seedsd1<-matrix(0,patch,patch)
+seedsd2<-matrix(0,patch,patch)
+
+#Pairwise Distances Matrix
+#Distances between patch i,j for row i 
+#and coloumn j
+pwdist<-matrix(NA,patch,patch)
+for (i in 1:patch){
+  for (j in 1:patch){
+    pwdist[i,j]<-dvect[j]-dvect[i]
+  }
+}
+
+####################################################################
+```
+
+To test this, let's consider an initial population of 12 individuals, so that 10 have a mean dispersal distance of 1 patch-length; and two have a mean dispersal distance of 1.25 patch-lengths. The proportion of propagules from each subpopulation from each patch will remain constant. So, for example, if there are 10 good-dispersers and 5 bad-dispersers, who collectively produce 30 seeds, 20 of these seeds will be good-dispersers, and 10 will be bad-dispersers. Here are the results of 10 test simulations through 10 generations and across a homogeneous landscape. We can see that the pattern of spread is highly variable even without modifying any of the starting parameters.
+```{r, echo=FALSE}
+#Run Simulation
+
+for (i in 1:(g_max-1)){ #for each generation
+  total<-spread[i,]+spreadhm[i,]
+  ratio<-spread[i,]/total
+  ratio[is.nan(ratio)] <- 0
+  seeds<-gNty(total)
+  seedsp1<-round(ratio*seeds)
+  seedsp2<-round((1-ratio)*seeds)
+  for (j in 1:patch){ #disperse seeds
+    seedsd1[j,]<-disperse2(seedsp1[j],j,m1)
+    seedsd2[j,]<-disperse2(seedsp2[j],j,m2)
+  }
+  spread[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
+  spreadhm[i+1,]<-apply(seedsd2,2,sum)
+}
+```
+
+```{r,echo=FALSE}
+plot(spread[2,], type="l", col="blue",ylim=c(0,100),main="Spread Across a Homogeneous Landcscape", xlab="Patch Distance from Origin", ylab="Number of Individuals")
+lines(spreadhm[2,], col="blue",lty=2)
+lines(spread[3,], col="blueviolet")
+lines(spreadhm[3,], col="blueviolet",lty=2)
+lines(spreadhm[4,], col="magenta",lty=2)
+lines(spread[4,], col="magenta")
+lines(spread[5,], col="red")
+lines(spreadhm[5,], col="red",lty=2)
+lines(spreadhm[6,], col="darkorange",lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[7,], col="brown", lty=2)
+lines(spreadhm[8,], col="darkgreen", lty=2)
+lines(spread[8,], col="darkgreen")
+lines(spread[9,], col="green")
+lines(spreadhm[9,], col="green",lty=2)
+lines(spreadhm[10,], col="black",lty=2)
+lines(spread[10,], col="black")
+legend("topleft", legend=c("Gen. 2", "Gen. 3", "Gen. 4", "Gen. 5", "Gen. 6", "Gen. 7", "Gen. 8", "Gen. 9", "Gen. 10"), col=c("blue","blueviolet","magenta","red","darkorange","brown","darkgreen","green","black"), lty=1, ncol=1,seg.len=1.3)
+legend("topright", legend=c("Low Dispersal Ability", "High Dispersal Ability"), lty=c(1,2))
+```
+
+```{r,include=FALSE}
+totalspread<-spread+spreadhm
+lemove1<-c(3.5,3,2,3.5,3.5,2,2,2.5,2.5)
+lemove2<-c(4,2,5,4,3.5,2.5,7.5,2,3.5)
+lemovet<-c(4.5,2.5,4,4,4,2,7.5,2,3.5)
+plot(lemovet, type="l", main="Patches Colonized Per Generation", xlab="Generation", ylab="Average Movement of the Leading Edge")
+lines(lemove1, col="blue")
+lines(lemove2,col="red")
+```
+
+```{r, echo=FALSE}
+#Run Simulation
+for (x in 1:9){
+  for (i in 1:(g_max-1)){ #for each generation
+  total<-spread[i,]+spreadhm[i,]
+  ratio<-spread[i,]/total
+  ratio[is.nan(ratio)] <- 0
+  seeds<-gNty(total)
+  seedsp1<-round(ratio*seeds)
+  seedsp2<-round((1-ratio)*seeds)
+  for (j in 1:patch){ #disperse seeds
+    seedsd1[j,]<-disperse2(seedsp1[j],j,m1)
+    seedsd2[j,]<-disperse2(seedsp2[j],j,m2)
+  }
+  spread[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
+  spreadhm[i+1,]<-apply(seedsd2,2,sum)
+}
+plot(spread[2,], type="l", col="blue",ylim=c(0,100), xlab="Patch Distance from Origin", ylab="Number of Individuals")
+lines(spreadhm[2,], col="blue",lty=2)
+lines(spread[3,], col="blueviolet")
+lines(spreadhm[3,], col="blueviolet",lty=2)
+lines(spreadhm[4,], col="magenta",lty=2)
+lines(spread[4,], col="magenta")
+lines(spread[5,], col="red")
+lines(spreadhm[5,], col="red",lty=2)
+lines(spreadhm[6,], col="darkorange",lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[7,], col="brown", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[8,], col="darkgreen", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spread[8,], col="darkgreen")
+lines(spread[9,], col="green")
+lines(spreadhm[9,], col="green",lty=2)
+lines(spreadhm[10,], col="black",lty=2)
+lines(spread[10,], col="black")
+legend("topleft", legend=c("Gen. 2", "Gen. 3", "Gen. 4", "Gen. 5", "Gen. 6", "Gen. 7", "Gen. 8", "Gen. 9", "Gen. 10"), col=c("blue","blueviolet","magenta","red","darkorange","brown","darkgreen","green","black"), lty=1, ncol=1,seg.len=1.3)
+legend("topright", legend=c("Low Dispersal Ability", "High Dispersal Ability"), lty=c(1,2))
+}
+
+```
+
+Here, we compare to 2 subpopulations with no difference in dispersal ability. We see the same variance in distributions of the subpopulations, but note that there are no cases where the dotted-line population overtakes the larger population in both directions.
+```{r, echo=FALSE}
+#distance decay rate (low mdd)
+m1 <- 1
+#distance decay rate (high mdd)
+m2<-1
+#Run Simulation
+for (x in 1:10){
+  for (i in 1:(g_max-1)){ #for each generation
+  total<-spread[i,]+spreadhm[i,]
+  ratio<-spread[i,]/total
+  ratio[is.nan(ratio)] <- 0
+  seeds<-gNty(total)
+  seedsp1<-round(ratio*seeds)
+  seedsp2<-round((1-ratio)*seeds)
+  for (j in 1:patch){ #disperse seeds
+    seedsd1[j,]<-disperse2(seedsp1[j],j,m1)
+    seedsd2[j,]<-disperse2(seedsp2[j],j,m2)
+  }
+  spread[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
+  spreadhm[i+1,]<-apply(seedsd2,2,sum)
+}
+plot(spread[2,], type="l", col="blue",ylim=c(0,100), xlab="Patch Distance from Origin", ylab="Number of Individuals")
+lines(spreadhm[2,], col="blue",lty=2)
+lines(spread[3,], col="blueviolet")
+lines(spreadhm[3,], col="blueviolet",lty=2)
+lines(spreadhm[4,], col="magenta",lty=2)
+lines(spread[4,], col="magenta")
+lines(spread[5,], col="red")
+lines(spreadhm[5,], col="red",lty=2)
+lines(spreadhm[6,], col="darkorange",lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[7,], col="brown", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[8,], col="darkgreen", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spread[8,], col="darkgreen")
+lines(spread[9,], col="green")
+lines(spreadhm[9,], col="green",lty=2)
+lines(spreadhm[10,], col="black",lty=2)
+lines(spread[10,], col="black")
+legend("topleft", legend=c("Gen. 2", "Gen. 3", "Gen. 4", "Gen. 5", "Gen. 6", "Gen. 7", "Gen. 8", "Gen. 9", "Gen. 10"), col=c("blue","blueviolet","magenta","red","darkorange","brown","darkgreen","green","black"), lty=1, ncol=1,seg.len=1.3)
+legend("topright", legend=c("Larger Population Control", "Smaller Population Control"), lty=c(1,2))
+}
+```
+
+And here, to a case where the good dispersers have double the mean dispersal distance of the poor dispersers. Here we see the expected result, where the good dispersers are dominant on the leading edge of the invasion.
+```{r, echo=FALSE}
+#distance decay rate (low mdd)
+m1 <- 1
+#distance decay rate (high mdd)
+m2<-0.5
+#Run Simulation
+for (x in 1:10){
+  for (i in 1:(g_max-1)){ #for each generation
+  total<-spread[i,]+spreadhm[i,]
+  ratio<-spread[i,]/total
+  ratio[is.nan(ratio)] <- 0
+  seeds<-gNty(total)
+  seedsp1<-round(ratio*seeds)
+  seedsp2<-round((1-ratio)*seeds)
+  for (j in 1:patch){ #disperse seeds
+    seedsd1[j,]<-disperse2(seedsp1[j],j,m1)
+    seedsd2[j,]<-disperse2(seedsp2[j],j,m2)
+  }
+  spread[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
+  spreadhm[i+1,]<-apply(seedsd2,2,sum)
+}
+plot(spread[2,], type="l", col="blue",ylim=c(0,100), xlab="Patch Distance from Origin", ylab="Number of Individuals")
+lines(spreadhm[2,], col="blue",lty=2)
+lines(spread[3,], col="blueviolet")
+lines(spreadhm[3,], col="blueviolet",lty=2)
+lines(spreadhm[4,], col="magenta",lty=2)
+lines(spread[4,], col="magenta")
+lines(spread[5,], col="red")
+lines(spreadhm[5,], col="red",lty=2)
+lines(spreadhm[6,], col="darkorange",lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[7,], col="brown", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[8,], col="darkgreen", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spread[8,], col="darkgreen")
+lines(spread[9,], col="green")
+lines(spreadhm[9,], col="green",lty=2)
+lines(spreadhm[10,], col="black",lty=2)
+lines(spread[10,], col="black")
+legend("topleft", legend=c("Gen. 2", "Gen. 3", "Gen. 4", "Gen. 5", "Gen. 6", "Gen. 7", "Gen. 8", "Gen. 9", "Gen. 10"), col=c("blue","blueviolet","magenta","red","darkorange","brown","darkgreen","green","black"), lty=1, ncol=1,seg.len=1.3)
+legend("topright", legend=c("Low Dispersal Ability", "High Dispersal Ability"), lty=c(1,2))
+}
+```
+
+Finally, we can consider a case where the good dispersers are evolving. We start with the same dispersal ability as the poor dispersers, but increase it slightly in each generation.
+```{r, echo=FALSE}
+#distance decay rate (low mdd)
+m1 <- 1
+#distance decay rate (high mdd)
+m2<-1
+#Run Simulation
+for (x in 1:10){
+  m2<-1
+  for (i in 1:(g_max-1)){ #for each generation
+  total<-spread[i,]+spreadhm[i,]
+  ratio<-spread[i,]/total
+  ratio[is.nan(ratio)] <- 0
+  seeds<-gNty(total)
+  m2<-m2-0.05
+  seedsp1<-round(ratio*seeds)
+  seedsp2<-round((1-ratio)*seeds)
+  for (j in 1:patch){ #disperse seeds
+    seedsd1[j,]<-disperse2(seedsp1[j],j,m1)
+    seedsd2[j,]<-disperse2(seedsp2[j],j,m2)
+  }
+  spread[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
+  spreadhm[i+1,]<-apply(seedsd2,2,sum)
+}
+plot(spread[2,], type="l", col="blue",ylim=c(0,100), xlab="Patch Distance from Origin", ylab="Number of Individuals")
+lines(spreadhm[2,], col="blue",lty=2)
+lines(spread[3,], col="blueviolet")
+lines(spreadhm[3,], col="blueviolet",lty=2)
+lines(spreadhm[4,], col="magenta",lty=2)
+lines(spread[4,], col="magenta")
+lines(spread[5,], col="red")
+lines(spreadhm[5,], col="red",lty=2)
+lines(spreadhm[6,], col="darkorange",lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[7,], col="brown", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[8,], col="darkgreen", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spread[8,], col="darkgreen")
+lines(spread[9,], col="green")
+lines(spreadhm[9,], col="green",lty=2)
+lines(spreadhm[10,], col="black",lty=2)
+lines(spread[10,], col="black")
+legend("topleft", legend=c("Gen. 2", "Gen. 3", "Gen. 4", "Gen. 5", "Gen. 6", "Gen. 7", "Gen. 8", "Gen. 9", "Gen. 10"), col=c("blue","blueviolet","magenta","red","darkorange","brown","darkgreen","green","black"), lty=1, ncol=1,seg.len=1.3)
+legend("topright", legend=c("Low Dispersal Ability", "High Dispersal Ability"), lty=c(1,2))
+}
+```
