@@ -98,9 +98,41 @@ refactor<-function(x){
   else x
 }
 
+#calculate how many new patches are colonized at the leading edge this generation
+lemove<-function(x){
+  moved<-patch-pleft(rev(x))
+  return(moved)
+}
+
+#lemove helper how many patches left to colonize
+pleft<-function(x){
+  y<-0
+  for (k in 1:patch){
+    if (x[k] != 0){
+      break
+    }
+    else y<-y+1
+  }
+  return(y)
+}
+
+#calculate how many patches the leading edge moves each generation
+speed<- function(x,y){
+  for (i in 1:g_max){
+    if (i == 1){
+      y[i]<-x[i]-1
+   }
+    else if (x[i] == 0){
+     y[i]<-0
+   }
+    else
+      y[i]=x[i]-x[i-1]
+  }
+  return(y)
+}
 ##########################################################
 
-# Initialize matrices for storing data
+# Initialize structures for storing data
 
 #Population Spread Matrix
 #Adds values to each row for each generation
@@ -109,6 +141,8 @@ spread<-matrix(0,g_max,patch)
 spread[1,1]<-N_0
 spreadhm<-matrix(0,g_max,patch)
 spreadhm[1,1]<-M_0
+spreadttl<-matrix(0,g_max,patch)
+spreadttl[1,]<-spread[1,]+spreadhm[1,]
 
 
 #Seeds Dispersed
@@ -134,10 +168,12 @@ for (i in 1:patch){
 # vectors for storing colonized patches
 col1<-vector("numeric", g_max)
 col2<-vector("numeric", g_max)
+colt<-vector("numeric", g_max)
 
 #Speed vectors 
 speedv1<-vector("numeric", g_max)
 speedv2<-vector("numeric",g_max)
+speedt<-vector("numeric", g_max)
 
 ####################################################################
 
@@ -156,42 +192,52 @@ for (i in 1:(g_max-1)){ #for each generation
   }
   spread[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
   spreadhm[i+1,]<-apply(seedsd2,2,sum)
-  row1<-rev(spread[i+1,])
-  row2<-rev(spreadhm[i+1,])
-  speed1<-0
-  speed2<-0
-  for (k in 1:patch){
-    if (row1[k] != 0){
-      break
-    }
-    speed1<-speed1+1
-  }
-  for (k in 1:patch){
-    if (row2[k] != 0){
-      break
-    }
-    speed2<-speed2+1
-  }
-  col1[i]<-patch-speed1
-  col2[i]<-patch-speed2
+  spreadttl[i+1,]<-spread[i+1,]+spreadhm[i+1,]
+  col1[i]<-lemove(spread[i+1,])#calculate how many patches the leading edge has advanced
+  col2[i]<-lemove(spreadhm[i+1,])
+  colt[i]<-lemove(spreadttl[i+1,])
+  
+  #before functions
+  # row1<-rev(spread[i+1,])
+  # row2<-rev(spreadhm[i+1,])
+  # speed1<-0
+  # speed2<-0
+  # for (k in 1:patch){
+  #   if (row1[k] != 0){
+  #     break
+  #   }
+  #   speed1<-speed1+1
+  # }
+  # for (k in 1:patch){
+  #   if (row2[k] != 0){
+  #     break
+  #   }
+  #   speed2<-speed2+1
+  # }
+  # col1[i]<-patch-speed1
+  # col2[i]<-patch-speed2
 }
-for (i in 1:g_max){
-  if (i == 1){
-   speedv1[i]<-col1[i]-1
-  }
-  else if (col1[i] == 0){
-    speedv1[i]<-0
-  }
- else
-   speedv1[i]=col1[i]-col1[i-1]
- }
-for (i in 1:g_max){
- if (i == 1){
-   speedv2[i]<-col1[i]-1
- }
-  else if (col2[i] == 0){
-    speedv2[i]<-0
-  }
- else
-    speedv2[i]=col2[i]-col2[i-1]
-}
+speedv1<-speed(col1,speedv1) #combine advances to get invasion velocity of leading edge
+speedv2<-speed(col2,speedv2)
+speedt<-speed(colt,speedt)
+
+# for (i in 1:g_max){
+#   if (i == 1){
+#    speedv1[i]<-col1[i]-1
+#   }
+#   else if (col1[i] == 0){
+#     speedv1[i]<-0
+#   }
+#  else
+#    speedv1[i]=col1[i]-col1[i-1]
+#  }
+# for (i in 1:g_max){
+#  if (i == 1){
+#    speedv2[i]<-col1[i]-1
+#  }
+#   else if (col2[i] == 0){
+#     speedv2[i]<-0
+#   }
+#  else
+#     speedv2[i]=col2[i]-col2[i-1]
+# }
