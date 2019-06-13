@@ -1,0 +1,461 @@
+---
+title: "Competitive Ability and Dispersal Trade-off Through Patchy Landscapes (2 Strategies only)"
+author: "Carla Urquhart"
+date: "05/06/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# parameters
+
+#intrinsic rate of increase 
+lambda1 <- 10
+#intrinsic rate of increase 
+lambda2 <- 66.9
+#intraspecific competition (competitive)
+alpha <- .3
+#intraspecific competition (less competitive)
+alpha2<- .15
+#distance decay rate 
+m1 <- 0.25
+#distance decay rate 
+m2<-3.75
+#starting population (competitive, bad dispersers)
+N_0 <- 10
+#starting population (less competitive, good dispersers)
+M_0<-10
+#number of generations to simulate 
+g_max <- 30
+#number of patches
+patch <- 100
+#distance between patches vector
+dpatch <- 1
+#Define distance vector (for now must be integer distances between patches)
+dvect <- seq(from=0,length.out = patch,by=dpatch)
+#Number of simulations
+nsim <- 20 
+
+##########################################################
+
+#functions
+
+#seed production function
+gNty <- function(j,k,lambda){ #j is subpopulation, k is total, alpha is competition
+  seeds<-vector()
+  jnext<-(lambda*j)/(1+alpha*(k-1))
+  seeds<-c(seeds,jnext)
+  return(round(seeds,0))
+}
+#dispersal function second version -- refactored to remove unnecessary loops and seperate steps into helpers
+disperse<-function(x,y,m){ # x is the number of seeds in the patch
+  # y is the coloumn index of the patch 
+  # m is the parameter defining the dispersal kernel
+  pmove<-vector("numeric", patch)
+  if (x==0)
+    return(pmove)
+  else
+    move<-distance(x,m)*direction(x)
+  for (i in 1:x){ #this moves seeds to their new home, x is number of seeds, compute for each seed 
+    for (j in 1:patch){ #this finds the corresponding home for each seed 
+     # place(move[i],pwdist[y,j],pmove[j])
+      if (move[i]==pwdist[y,j])
+      {pmove[j]<-pmove[j]+1}
+    }
+  }
+ return(pmove) 
+}
+#dispersal helper -- generate random distances, parameters are from disperse
+distance<-function(x,m){
+  dist<-round(rexp(x,m),0)
+  return(dist)
+}
+
+#dispersal helper -- generate random directions,x is as disperse
+direction<-function(x){
+  dir<-rbinom(x,1,0.5)
+  sapply(dir,refactor)
+}
+
+#direction helper -- refactor 0 to -1
+refactor<-function(x){ #  x is values from binomial 
+  if (x==0)
+    x<- -1
+  else x
+}
+
+#calculate how many new patches are colonized at the leading edge this generation
+lemove<-function(x){ #x is the row in spread matrix corresponding to time t
+  moved<-patch-pleft(rev(x))
+  return(moved)
+}
+
+#lemove helper how many patches left to colonize
+pleft<-function(x){ # x is from lemove, 
+  y<-0
+  for (k in 1:patch){
+    if (x[k] != 0){
+      break
+    }
+    else y<-y+1
+  }
+  return(y)
+}
+
+#calculate how many patches the leading edge moves each generation
+# assumes that only one patch is colonized at start
+speed<- function(x,y){ # x is vector of the leading edge patch each generation
+  # y is the output vector, showing the number of patches the leading edge moved
+  for (i in 1:g_max){
+    if (i == 1){
+      y[i]<-x[i]-1
+   }
+    else if (x[i] == 0){
+     y[i]<-0
+   }
+    else
+      y[i]=x[i]-x[i-1]
+  }
+  return(y)
+}
+# Initialize structures for storing data
+
+#Population Spread Matrix
+#Adds values to each row for each generation
+#Coloumns correspond to patches defined by dvect
+spread1<-matrix(0,g_max,patch)
+spread1[1,1]<-N_0
+spread2<-matrix(0,g_max,patch)
+spread2[1,1]<-M_0
+spreadttl<-matrix(0,g_max,patch)
+spreadttl[1,]<-spread1[1,]+spread2[1,]
+
+
+#Seeds Dispersed
+#vector for storing seeds produced, resets each generation
+seedsp1<-vector("numeric", patch)
+seedsp2<-vector("numeric",patch)
+#matrix containing number of plants/seeds in each patch after dispersal
+#rows are originating patches where seeds were produced,
+#coloumns are where they disperse to
+seedsd1<-matrix(0,patch,patch)
+seedsd2<-matrix(0,patch,patch)
+
+#Pairwise Distances Matrix
+#Distances between patch i,j for row i 
+#and coloumn j
+pwdist<-matrix(NA,patch,patch)
+for (i in 1:patch){
+  for (j in 1:patch){
+    pwdist[i,j]<-dvect[j]-dvect[i]
+  }
+}
+
+# vectors for storing colonized patches
+col1<-vector("numeric", g_max)
+col2<-vector("numeric", g_max)
+colt<-vector("numeric", g_max)
+
+#Speed vectors 
+speedv1<-vector("numeric", g_max)
+speedv2<-vector("numeric",g_max)
+speedt<-vector("numeric", g_max)
+
+# Average speed vectors
+speedmn1<-vector("numeric",nsim)
+speedmn2<-vector("numeric",nsim)
+speedmnt<-vector("numeric",nsim)
+
+# Alternative speed vectors
+speed1<-vector("numeric",nsim)
+speed2<-vector("numeric",nsim)
+speedtl<-vector("numeric",nsim)
+```
+First we will compare a competitive and a dispersive strategy spreading across a uniformly favourable environment. Both strategies start with 10 individuals in the left-most patch. We expect that the better dispersers will dominate at the leading edge in a large majority of simulations. However, these preliminary results demonstrate that there is a higher than expected probability that the competitive stategy will lead the invasion. We expec that this is due to founder effects -- ie. if competitive individuals disperse farther early in the invasion by chance, the dispersive strategy will not be able to overtake them. It's likely that a strategy that is in between, with medium dispersal ability and competitive ability would be selected for in a homogeneous landscape. Note that the speed of the invasion is highly variable. A next step would be to display speed according to which stategy leads the invasion, but visual inspection shows that the simulations where the dispersive strategy "wins" have higher velocities (as we would expect).
+
+
+```{r sim, echo=FALSE}
+for (x in 1:nsim){
+  for (i in 1:(g_max-1)){ #for each generation
+  total<-spread1[i,]+spread2[i,]
+  # ratio<-spread[i,]/total
+  # ratio[is.nan(ratio)] <- 0
+  seeds1<-gNty(spread1[i,],total,lambda1)
+  seeds2<-gNty(spread2[i,],total,lambda2)
+  # seedsp1<-round(ratio*seeds)
+  # seedsp2<-round((1-ratio)*seeds)
+  for (j in 1:patch){ #disperse seeds
+    seedsd1[j,]<-disperse(seeds1[j],j,m1)
+    seedsd2[j,]<-disperse(seeds2[j],j,m2)
+  }
+  spread1[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
+  spread2[i+1,]<-apply(seedsd2,2,sum)
+  spreadttl[i+1,]<-spread1[i+1,]+spread2[i+1,]
+  col1[i]<-lemove(spread1[i+1,])#calculate how many patches the leading edge has advanced
+  col2[i]<-lemove(spread2[i+1,])
+  colt[i]<-lemove(spreadttl[i+1,])
+  
+}
+speedv1<-speed(col1,speedv1) #combine advances to get invasion velocity of leading edge
+speedv2<-speed(col2,speedv2)
+speedt<-speed(colt,speedt)
+speedmn1[x]<-mean(speedv1) # average invasion velocity over time
+speedmn2[x]<-mean(speedv2)
+speedmnt[x]<-mean(speedt)
+speed1[x]<-col1[g_max]/g_max
+speed2[x]<-col2[g_max]/g_max
+speedtl[x]<-colt[g_max-1]/g_max-1
+ plot(spread1[g_max,], type="l", col="blue",ylim=c(0,150),main="Spread Across a Homogeneous Landcscape",  xlab="Patch Distance from Origin", ylab="Number of Individuals")
+  lines(spread2[g_max,], col="red")
+  
+legend("topright", legend=c("Dispersive", "Fecund"), col=c("blue","red"))
+}
+plot(speedmnt)
+#plot(speedtl)
+
+```
+
+
+```{r reset, include=FALSE}
+# parameters
+
+#intrinsic rate of increase 
+lambda <- 10
+#intraspecific competition (competitive)
+alpha1 <- .1
+#intraspecific competition (less competitive)
+alpha2<- .15
+#distance decay rate (low mdd)
+m1 <- 1.3
+#distance decay rate (high mdd)
+m2<-1
+#starting population (competitive, bad dispersers)
+N_0 <- 10
+#starting population (less competitive, good dispersers)
+M_0<-10
+#number of generations to simulate 
+g_max <- 30
+#number of patches
+patch <- 100
+#distance between patches vector
+dpatch <- 2
+#Define distance vector (for now must be integer distances between patches)
+dvect <- seq(from=0,length.out = patch,by=dpatch)
+#Number of simulations
+nsim <- 20 
+
+##########################################################
+
+#functions
+
+#seed production function
+gNty <- function(j,k,alpha){ #j is subpopulation, k is total, alpha is competition
+  seeds<-vector()
+  jnext<-(lambda*j)/(1+alpha*(k-1))
+  seeds<-c(seeds,jnext)
+  return(round(seeds,0))
+}
+#dispersal function second version -- refactored to remove unnecessary loops and seperate steps into helpers
+disperse<-function(x,y,m){ # x is the number of seeds in the patch
+  # y is the coloumn index of the patch 
+  # m is the parameter defining the dispersal kernel
+  pmove<-vector("numeric", patch)
+  if (x==0)
+    return(pmove)
+  else
+    move<-distance(x,m)*direction(x)
+  for (i in 1:x){ #this moves seeds to their new home, x is number of seeds, compute for each seed 
+    for (j in 1:patch){ #this finds the corresponding home for each seed 
+     # place(move[i],pwdist[y,j],pmove[j])
+      if (move[i]==pwdist[y,j])
+      {pmove[j]<-pmove[j]+1}
+    }
+  }
+ return(pmove) 
+}
+#dispersal helper -- generate random distances, parameters are from disperse
+distance<-function(x,m){
+  dist<-round(rexp(x,m),0)
+  return(dist)
+}
+
+#dispersal helper -- generate random directions,x is as disperse
+direction<-function(x){
+  dir<-rbinom(x,1,0.5)
+  sapply(dir,refactor)
+}
+
+#direction helper -- refactor 0 to -1
+refactor<-function(x){ #  x is values from binomial 
+  if (x==0)
+    x<- -1
+  else x
+}
+
+#calculate how many new patches are colonized at the leading edge this generation
+lemove<-function(x){ #x is the row in spread matrix corresponding to time t
+  moved<-patch-pleft(rev(x))
+  return(moved)
+}
+
+#lemove helper how many patches left to colonize
+pleft<-function(x){ # x is from lemove, 
+  y<-0
+  for (k in 1:patch){
+    if (x[k] != 0){
+      break
+    }
+    else y<-y+1
+  }
+  return(y)
+}
+
+#calculate how many patches the leading edge moves each generation
+# assumes that only one patch is colonized at start
+speed<- function(x,y){ # x is vector of the leading edge patch each generation 
+  # y is the output vector, showing the number of patches the leading edge moved
+  # z is the gap size
+  for (i in 1:g_max){
+    if (i == 1){
+      y[i]<-x[i]-1
+   }
+    else if (x[i] == 0){
+     y[i]<-0
+   }
+    else
+      y[i]=x[i]-x[i-1]
+  }
+  return(y)
+}
+# Initialize structures for storing data
+
+#Population Spread Matrix
+#Adds values to each row for each generation
+#Coloumns correspond to patches defined by dvect
+spreada<-matrix(0,g_max,patch)
+spreada[1,1]<-N_0
+spreadd<-matrix(0,g_max,patch)
+spreadd[1,1]<-M_0
+spreadttl<-matrix(0,g_max,patch)
+spreadttl[1,]<-spreada[1,]+spreadd[1,]
+
+
+#Seeds Dispersed
+#vector for storing seeds produced, resets each generation
+seedsp1<-vector("numeric", patch)
+seedsp2<-vector("numeric",patch)
+#matrix containing number of plants/seeds in each patch after dispersal
+#rows are originating patches where seeds were produced,
+#coloumns are where they disperse to
+seedsd1<-matrix(0,patch,patch)
+seedsd2<-matrix(0,patch,patch)
+
+#Pairwise Distances Matrix
+#Distances between patch i,j for row i 
+#and coloumn j
+pwdist<-matrix(NA,patch,patch)
+for (i in 1:patch){
+  for (j in 1:patch){
+    pwdist[i,j]<-dvect[j]-dvect[i]
+  }
+}
+
+# vectors for storing colonized patches -- change to matrices to keep each iteration
+col1<-vector("numeric", g_max)
+col2<-vector("numeric", g_max)
+colt<-vector("numeric", g_max)
+
+#Speed vectors 
+speedv1<-vector("numeric", g_max)
+speedv2<-vector("numeric",g_max)
+speedt<-vector("numeric", g_max)
+
+# Average speed vectors
+speedmn1<-vector("numeric",nsim)
+speedmn2<-vector("numeric",nsim)
+speedmnt<-vector("numeric",nsim)
+
+# Alternative speed vectors
+speed1<-vector("numeric",nsim)
+speed2<-vector("numeric",nsim)
+speedtl<-vector("numeric",nsim)
+```
+
+Next we will consider an invasion across a patchy landscape. Here we have evenly spaced patches and gaps, so that each gap is equivalent to the mean dispersal distance of the dispersive strategy. Here we expect that the better dispersers will still lead the invasion, as there is a low cost to crossing the gap. Contrary to predictions, the competitive strategy almost always leads the invasion. It is also interesting to note that the invasion is much slower, and with less variability between simulations. These results suggest that spatial sorting may not be a dominant process in patchy landscapes.
+
+```{r sim2, echo=FALSE}
+for (x in 1:nsim){
+  for (i in 1:(g_max-1)){ #for each generation
+  total<-spreada[i,]+spreadd[i,]
+  # ratio<-spread[i,]/total
+  # ratio[is.nan(ratio)] <- 0
+  seeds1<-gNty(spreada[i,],total,alpha1)
+  seeds2<-gNty(spreadd[i,],total,alpha2)
+  # seedsp1<-round(ratio*seeds)
+  # seedsp2<-round((1-ratio)*seeds)
+  for (j in 1:patch){ #disperse seeds
+    seedsd1[j,]<-disperse(seeds1[j],j,m1)
+    seedsd2[j,]<-disperse(seeds2[j],j,m2)
+  }
+  spreada[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
+  spreadd[i+1,]<-apply(seedsd2,2,sum)
+  spreadttl[i+1,]<-spreada[i+1,]+spreadd[i+1,]
+  col1[i]<-lemove(spreada[i+1,])#calculate how many patches the leading edge has advanced
+  col2[i]<-lemove(spreadd[i+1,])
+  colt[i]<-lemove(spreadttl[i+1,])
+  
+}
+speedv1<-speed(col1,speedv1) #combine advances to get invasion velocity of leading edge
+speedv2<-speed(col2,speedv2)
+speedt<-speed(colt,speedt)
+speedmn1[x]<-mean(speedv1) # average invasion velocity over time
+speedmn2[x]<-mean(speedv2)
+speedmnt[x]<-mean(speedt)
+speed1[x]<-col1[g_max]/g_max
+speed2[x]<-col2[g_max]/g_max
+speedtl[x]<-colt[g_max-1]*dpatch/g_max-1
+ plot(spreada[2,], type="l", col="blue",ylim=c(0,150),main="Spread Across a Patchy Landcscape",  xlab="Patch Distance from Origin", ylab="Number of Individuals")
+  lines(spreadd[2,], col="blue",lty=2)
+  lines(spreada[3,], col="blueviolet")
+  lines(spreadd[3,], col="blueviolet",lty=2)
+  lines(spreadd[4,], col="magenta",lty=2)
+  lines(spreada[4,], col="magenta")
+  lines(spreada[5,], col="red")
+  lines(spreadd[5,], col="red",lty=2)
+  lines(spreadd[6,], col="darkorange",lty=2)
+  lines(spreada[6,], col="darkorange")
+  lines(spreada[7,], col="brown")
+  lines(spreadd[7,], col="brown", lty=2)
+  lines(spreadd[8,], col="darkgreen", lty=2)
+  lines(spreada[8,], col="darkgreen")
+  lines(spreada[9,], col="green")
+  lines(spreadd[9,], col="green",lty=2)
+  lines(spreadd[10,], col="black",lty=2)
+  lines(spreada[10,], col="black")
+  lines(spreada[11,], col="blue")
+  lines(spreadd[11,], col="blue",lty=2)
+  lines(spreada[12,], col="blueviolet")
+  lines(spreadd[12,], col="blueviolet",lty=2)
+  lines(spreadd[13,], col="magenta",lty=2)
+  lines(spreada[13,], col="magenta")
+  lines(spreada[14,], col="red")
+  lines(spreadd[14,], col="red",lty=2)
+  lines(spreadd[15,], col="darkorange",lty=2)
+  lines(spreada[15,], col="darkorange")
+  lines(spreada[16,], col="brown")
+  lines(spreadd[16,], col="brown", lty=2)
+  lines(spreada[17,], col="darkgreen", lty=2)
+  lines(spreada[17,], col="darkgreen")
+  lines(spreada[18,], col="green")
+  lines(spreadd[18,], col="green",lty=2)
+  lines(spreadd[19,], col="black",lty=2)
+  lines(spreada[19,], col="black")
+  lines(spreada[20,], col="blue")
+  lines(spreadd[20,], col="blue",lty=2)
+legend("topright", legend=c("Competitive", "Dispersive"), lty=c(1,2))
+plot(1:g_max~colt)
+}
+#plot(speedmnt)
+plot(speedtl)
+```
+
+

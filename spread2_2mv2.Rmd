@@ -1,0 +1,689 @@
+---
+title: "Comparing Populations with High and Low Dispersal Ability"
+author: "Carla Urquhart"
+date: "May 16, 2019"
+output: html_document
+---
+
+This example uses the same script as the general examples shown before, but modified so that we consider two sub-populations: one with high dispersal ability and one with low dispersal ability. The functions and parameters we use are the same, except that we change $m$ into a variable in the dispersal function, and set two parameters: $m_1$ and $m_2$, where $m_1>m_2$. Recall that $m$ defines the dispersal kernel and thus the mean dispersal distance. We expect that the population with the higher dispersal ability (lower $m$) will be the prevalent subpopulation at the leading edge of the invasion, and thst it will spread faster across the landscape.
+
+```{r, include=FALSE}
+#########################################################
+
+# parameters
+
+#intrinsic rate of increase (lowest)
+lambda1 <- 10
+#intrinsic rate of increase
+lambda2 <- 15.5
+#intrinsic rate of increase
+lambda3 <- 20.5
+#intrinsic rate of increase
+lambda4 <- 25
+#intrinsic rate of increase
+lambda5 <- 28
+#intrinsic rate of increase
+lambda6 <- 32
+#intrinsic rate of increase
+lambda7 <- 35
+#intrinsic rate of increase (highest)
+lambda8 <- 37
+#intraspecific competition
+alpha <- .2
+#distance decay rate (highest)
+m1 <- 0.5
+#distance decay rate 
+m2<-0.8
+#distance decay rate 
+m3<-1.1
+#distance decay rate 
+m4<-1.4
+#distance decay rate 
+m5<-1.7
+#distance decay rate 
+m6<-2.0
+#distance decay rate 
+m7<-2.3
+#distance decay rate 
+m8<-2.6
+#starting population for each strategy
+N_0 <- 1
+# number of simulations to run
+nsim<-5
+#number of generations to simulate 
+g_max <- 10
+#number of patches
+patch <- 100
+#distance between patches vector
+dpatch <- 1
+#Define distance vector (for now must be integer distances between patches)
+dvect <- seq(from=0,length.out = patch,by=dpatch)
+# p1<-seq(from=0,length.out=3,by=1)
+# p2<-seq(from=8,length.out=3,by=1)
+# p3<-seq(from=13,length.out=5,by=1)
+# dvect<-c(p1,p2,p3)
+
+##########################################################
+
+#functions
+
+#seed production function
+gNty <- function(j,k,lambda){ #j is subpopulation, k is total
+  seeds<-vector()
+  jnext<-(lambda*j)/(1+alpha*(k-1))
+  seeds<-c(seeds,jnext)
+  return(round(seeds,0))
+}
+
+#dispersal function second version -- refactored to remove unnecessary loops and seperate steps into helpers
+disperse<-function(x,y,m){ # x is the number of seeds in the patch
+  # y is the coloumn index of the patch 
+  # m is the parameter defining the dispersal kernel
+  pmove<-vector("numeric", patch)
+  if (x==0)
+    return(pmove)
+  else
+    move<-distance(x,m)*direction(x)
+  for (i in 1:x){ #this moves seeds to their new home, x is number of seeds, compute for each seed 
+    for (j in 1:patch){ #this finds the corresponding home for each seed 
+     # place(move[i],pwdist[y,j],pmove[j])
+      if (move[i]==pwdist[y,j])
+      {pmove[j]<-pmove[j]+1}
+    }
+  }
+ return(pmove) 
+}
+#dispersal helper -- generate random distances, parameters are from disperse
+distance<-function(x,m){
+  dist<-round(rexp(x,m),0)
+  return(dist)
+}
+
+#dispersal helper -- generate random directions,x is as disperse
+direction<-function(x){
+  dir<-rbinom(x,1,0.5)
+  sapply(dir,refactor)
+}
+
+#direction helper -- refactor 0 to -1
+refactor<-function(x){ #  x is values from binomial 
+  if (x==0)
+    x<- -1
+  else x
+}
+
+#calculate how many new patches are colonized at the leading edge this generation
+lemove<-function(x){ #x is the row in spread matrix corresponding to time t
+  moved<-patch-pleft(rev(x))
+  return(moved)
+}
+
+#lemove helper how many patches left to colonize
+pleft<-function(x){ # x is from lemove, 
+  y<-0
+  for (k in 1:patch){
+    if (x[k] != 0){
+      break
+    }
+    else y<-y+1
+  }
+  return(y)
+}
+
+#calculate how many patches the leading edge moves each generation
+# assumes that only one patch is colonized at start
+speed<- function(x,y){ # x is vector of the leading edge patch each generation
+  # y is the output vector, showing the number of patches the leading edge moved
+  for (i in 1:g_max){
+    if (i == 1){
+      y[i]<-x[i]-1
+   }
+    else if (x[i] == 0){
+     y[i]<-0
+   }
+    else
+      y[i]=x[i]-x[i-1]
+  }
+  return(y)
+}
+##########################################################
+
+# Initialize structures for storing data
+
+#Population Spread Matrix
+#Adds values to each row for each generation
+#Coloumns correspond to patches defined by dvect
+spread1<-matrix(0,g_max,patch)
+spread1[1,1]<-N_0
+spread2<-matrix(0,g_max,patch)
+spread2[1,1]<-N_0
+spread3<-matrix(0,g_max,patch)
+spread3[1,1]<-N_0
+spread4<-matrix(0,g_max,patch)
+spread4[1,1]<-N_0
+spread5<-matrix(0,g_max,patch)
+spread5[1,1]<-N_0
+spread6<-matrix(0,g_max,patch)
+spread6[1,1]<-N_0
+spread7<-matrix(0,g_max,patch)
+spread7[1,1]<-N_0
+spread8<-matrix(0,g_max,patch)
+spread8[1,1]<-N_0
+spreadttl<-matrix(0,g_max,patch)
+spreadttl[1,]<-N_0*8
+
+
+#Seeds Dispersed
+#vector for storing seeds produced, resets each generation
+seedsp1<-vector("numeric", patch)
+seedsp2<-vector("numeric",patch)
+seedsp3<-vector("numeric",patch)
+seedsp4<-vector("numeric",patch)
+seedsp5<-vector("numeric",patch)
+seedsp6<-vector("numeric",patch)
+seedsp7<-vector("numeric",patch)
+seedsp8<-vector("numeric",patch)
+#matrix containing number of plants/seeds in each patch after dispersal
+#rows are originating patches where seeds were produced,
+#coloumns are where they disperse to
+seedsd1<-matrix(0,patch,patch)
+seedsd2<-matrix(0,patch,patch)
+seedsd3<-matrix(0,patch,patch)
+seedsd4<-matrix(0,patch,patch)
+seedsd5<-matrix(0,patch,patch)
+seedsd6<-matrix(0,patch,patch)
+seedsd7<-matrix(0,patch,patch)
+seedsd8<-matrix(0,patch,patch)
+
+#Pairwise Distances Matrix
+#Distances between patch i,j for row i 
+#and coloumn j
+pwdist<-matrix(NA,patch,patch)
+for (i in 1:patch){
+  for (j in 1:patch){
+    pwdist[i,j]<-dvect[j]-dvect[i]
+  }
+}
+
+# vectors for storing colonized patches
+col1<-vector("numeric", g_max)
+col2<-vector("numeric", g_max)
+col3<-vector("numeric", g_max)
+col4<-vector("numeric", g_max)
+col5<-vector("numeric", g_max)
+col6<-vector("numeric", g_max)
+col7<-vector("numeric", g_max)
+col8<-vector("numeric", g_max)
+colt<-vector("numeric", g_max)
+
+#Speed vectors 
+speedv1<-vector("numeric", g_max)
+speedv2<-vector("numeric",g_max)
+speedv3<-vector("numeric",g_max)
+speedv4<-vector("numeric",g_max)
+speedv5<-vector("numeric",g_max)
+speedv6<-vector("numeric",g_max)
+speedv7<-vector("numeric",g_max)
+speedv8<-vector("numeric",g_max)
+speedt<-vector("numeric", g_max)
+
+# Average speed vectors
+speedmn1<-vector("numeric",nsim)
+speedmn2<-vector("numeric",nsim)
+speedmn3<-vector("numeric",nsim)
+speedmn4<-vector("numeric",nsim)
+speedmn5<-vector("numeric",nsim)
+speedmn6<-vector("numeric",nsim)
+speedmn7<-vector("numeric",nsim)
+speedmn8<-vector("numeric",nsim)
+speedmnt<-vector("numeric",nsim)
+####################################################################
+```
+
+
+
+```{r, echo=FALSE}
+#Run Simulation
+for (x in 1:nsim){
+ for (i in 1:(g_max-1)){ #for each generation
+  total<-spreadttl[i,]
+  # ratio<-spread[i,]/total
+  # ratio[is.nan(ratio)] <- 0
+  seeds1<-gNty(spread1[i,],total,lambda1)
+  seeds2<-gNty(spread2[i,],total,lambda2)
+  seeds3<-gNty(spread2[i,],total,lambda3)
+  seeds4<-gNty(spread2[i,],total,lambda4)
+  seeds5<-gNty(spread2[i,],total,lambda5)
+  seeds6<-gNty(spread2[i,],total,lambda6)
+  seeds7<-gNty(spread2[i,],total,lambda7)
+  seeds8<-gNty(spread2[i,],total,lambda8)
+
+  for (j in 1:patch){ #disperse seeds
+    seedsd1[j,]<-disperse(seeds1[j],j,m1)
+    seedsd2[j,]<-disperse(seeds2[j],j,m2)
+    seedsd3[j,]<-disperse(seeds3[j],j,m3)
+    seedsd4[j,]<-disperse(seeds4[j],j,m4)
+    seedsd5[j,]<-disperse(seeds5[j],j,m5)
+    seedsd6[j,]<-disperse(seeds6[j],j,m6)
+    seedsd7[j,]<-disperse(seeds7[j],j,m7)
+    #seedsd8[j,]<-disperse(seeds8[j],j,m8)
+  }
+  spread1[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
+  spreadttl[i+1]<-spread1[i+1]
+  spread2[i+1,]<-apply(seedsd2,2,sum)
+  spreadttl[i+1,]<-spreadttl[i+1,]+spread2[i+1,]
+  spread3[i+1,]<-apply(seedsd3,2,sum)
+  spreadttl[i+1,]<-spreadttl[i+1,]+spread3[i+1,]
+  spread4[i+1,]<-apply(seedsd4,2,sum)
+  spreadttl[i+1,]<-spreadttl[i+1,]+spread4[i+1,]
+  spread5[i+1,]<-apply(seedsd5,2,sum)
+  spreadttl[i+1,]<-spreadttl[i+1,]+spread5[i+1,]
+  spread6[i+1,]<-apply(seedsd6,2,sum)
+  spreadttl[i+1,]<-spreadttl[i+1,]+spread6[i+1,]
+  spread7[i+1,]<-apply(seedsd7,2,sum)
+  spreadttl[i+1,]<-spreadttl[i+1,]+spread7[i+1,]
+  spread8[i+1,]<-apply(seedsd8,2,sum)
+  spreadttl[i+1,]<-spreadttl[i+1,]+spread8[i+1,]
+
+  col1[i]<-lemove(spread1[i+1,])#calculate how many patches the leading edge has advanced
+  col2[i]<-lemove(spread2[i+1,])
+  col3[i]<-lemove(spread2[i+1,])
+  col4[i]<-lemove(spread2[i+1,])
+  col5[i]<-lemove(spread2[i+1,])
+  col6[i]<-lemove(spread2[i+1,])
+  col7[i]<-lemove(spread2[i+1,])
+  col8[i]<-lemove(spread2[i+1,])
+  colt[i]<-lemove(spreadttl[i+1,])
+  
+}
+speedv1<-speed(col1,speedv1) #combine advances to get invasion velocity of leading edge
+speedv2<-speed(col2,speedv2)
+speedv3<-speed(col2,speedv3)
+speedv4<-speed(col2,speedv4)
+speedv5<-speed(col2,speedv5)
+speedv6<-speed(col2,speedv6)
+speedv7<-speed(col2,speedv7)
+speedv8<-speed(col2,speedv8)
+speedt<-speed(colt,speedt)
+speedm1<-mean(speedv1) # average invasion velocity over time
+speedm2<-mean(speedv2)
+speedm3<-mean(speedv3)
+speedm4<-mean(speedv4)
+speedm5<-mean(speedv5)
+speedm6<-mean(speedv6)
+speedm7<-mean(speedv7)
+speedm8<-mean(speedv8)
+speedmt<-mean(speedt)
+  plot(spread1[g_max,], type="l", col="red",ylim=c(0,150),main="Spread Across a Homogeneous Landcscape",  xlab="Patch Distance from Origin", ylab="Number of Individuals")
+  lines(spread2[g_max,], col="darkorange")
+  lines(spread3[g_max,], col="darkyellow")
+  lines(spread4[g_max,], col="green")
+  lines(spread5[g_max,], col="darkgreen")
+  lines(spread6[g_max,], col="turqoise")
+  lines(spread7[g_max,], col="blue")
+  lines(spread8[g_max,], col="blueviolet")
+  
+  legend("topright", legend=c("Highest Mean Dispersal Distance", "Highest Fecundity"), lty=c(1,2),col=c("red","blueviolet"))
+  
+  speedv1<-speed(col1,speedv1) #combine advances to get invasion velocity of leading edge
+  speedv2<-speed(col2,speedv2)
+  speedv3<-speed(col3,speedv3)
+  speedv4<-speed(col4,speedv4)
+  speedv5<-speed(col5,speedv5)
+  speedv6<-speed(col6,speedv6)
+  speedv7<-speed(col7,speedv7)
+  speedv8<-speed(col8,speedv8)
+  speedt<-speed(colt,speedt)
+  plot(speedv1, type="l", xlab="Generation Number", ylab="Invasion Velocity (multiples of MDD)", lwd=2, lty=2,col="darkorange", ylim=c(0,10))
+  lines(speedv2, col="red", lwd=2,lty=2)
+  lines(speedv3, col="darkyellow", lwd=2,lty=2)
+  lines(speedv4, col="green", lwd=2,lty=2)
+  lines(speedv5, col="darkgreen", lwd=2,lty=2)
+  lines(speedv6, col="turqoise", lwd=2,lty=2)
+  lines(speedv7, col="blue", lwd=2,lty=2)
+  lines(speedv8, col="blueviolet", lwd=2,lty=2)
+  lines(speedt,lwd=2)
+  legend("topright", legend=c("Total Population", "Highest mean dispersal distance", "Highest Fecundity"), col=c("black", "red","blueviolet"), lty=1, seg.len=1.5)
+}
+
+```
+
+Here, we compare to 2 subpopulations with no difference in dispersal ability. We see the same variance in distributions of the subpopulations, but note that there are no cases where the dotted-line population overtakes the larger population in both directions.
+
+```{r, echo=FALSE}
+#distance decay rate (low mdd)
+m1 <- 1
+#distance decay rate (high mdd)
+m2<-1
+#Run Simulation
+for (x in 1:10){
+  for (i in 1:(g_max-1)){ #for each generation
+  total<-spread[i,]+spreadhm[i,]
+  ratio<-spread[i,]/total
+  ratio[is.nan(ratio)] <- 0
+  seeds<-gNty(total)
+  seedsp1<-round(ratio*seeds)
+  seedsp2<-round((1-ratio)*seeds)
+  for (j in 1:patch){ #disperse seeds
+    seedsd1[j,]<-disperse2(seedsp1[j],j,m1)
+    seedsd2[j,]<-disperse2(seedsp2[j],j,m2)
+  }
+  spread[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
+  spreadhm[i+1,]<-apply(seedsd2,2,sum)
+  spreadttl[i+1,]<-spread[i+1,]+spreadhm[i+1,]
+  col1[i]<-lemove(spread[i+1,])#calculate how many patches the leading edge has advanced
+  col2[i]<-lemove(spreadhm[i+1,])
+   colt[i]<-lemove(spreadttl[i+1,])
+  }
+  
+plot(spread[2,], type="l", col="blue",ylim=c(0,100), xlab="Patch Distance from Origin", ylab="Number of Individuals")
+lines(spreadhm[2,], col="blue",lty=2)
+lines(spread[3,], col="blueviolet")
+lines(spreadhm[3,], col="blueviolet",lty=2)
+lines(spreadhm[4,], col="magenta",lty=2)
+lines(spread[4,], col="magenta")
+lines(spread[5,], col="red")
+lines(spreadhm[5,], col="red",lty=2)
+lines(spreadhm[6,], col="darkorange",lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[7,], col="brown", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[8,], col="darkgreen", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spread[8,], col="darkgreen")
+lines(spread[9,], col="green")
+lines(spreadhm[9,], col="green",lty=2)
+lines(spreadhm[10,], col="black",lty=2)
+lines(spread[10,], col="black")
+lines(spread[11,], col="blue")
+lines(spreadhm[11,], col="blue",lty=2)
+lines(spread[12,], col="blueviolet")
+lines(spreadhm[12,], col="blueviolet",lty=2)
+lines(spreadhm[13,], col="magenta",lty=2)
+lines(spread[13,], col="magenta")
+lines(spread[14,], col="red")
+lines(spreadhm[14,], col="red",lty=2)
+lines(spreadhm[15,], col="darkorange",lty=2)
+lines(spread[15,], col="darkorange")
+lines(spread[16,], col="brown")
+lines(spreadhm[16,], col="brown", lty=2)
+lines(spreadhm[17,], col="darkgreen", lty=2)
+lines(spread[17,], col="darkgreen")
+lines(spread[18,], col="green")
+lines(spreadhm[18,], col="green",lty=2)
+lines(spreadhm[19,], col="black",lty=2)
+lines(spread[19,], col="black")
+lines(spread[20,], col="blue")
+lines(spreadhm[20,], col="blue",lty=2)
+#legend("topleft", legend=c("Gen. 2", "Gen. 3", "Gen. 4", "Gen. 5", "Gen. 6", "Gen. 7", "Gen. 8", "Gen. 9", "Gen. 10"), col=c("blue","blueviolet","magenta","red","darkorange","brown","darkgreen","green","black"), lty=1, ncol=1,seg.len=1.3)
+legend("topright", legend=c("Larger Population Control", "Smaller Population Control"), lty=c(1,2))
+speedv1<-speed(col1,speedv1) #combine advances to get invasion velocity of leading edge
+speedv2<-speed(col2,speedv2)
+speedt<-speed(colt,speedt)
+plot(speedv2, type="l", xlab="Generation Number", ylab="Invasion Velocity (multiples of MDD)", lwd=2, col="red", ylim=c(0,10))
+lines(speedv1, col="blue", lwd=2)
+lines(speedt,lwd=2)
+legend("topright", legend=c("Total Population", "Smaller Starting Population", "Larger Starting Population"), col=c("black", "blue","red"), lty=1, seg.len=1.5)
+}
+
+```
+
+And here, to a case where the good dispersers have double the mean dispersal distance of the poor dispersers. Here we see the expected result, where the good dispersers are dominant on the leading edge of the invasion.
+```{r, echo=FALSE}
+#distance decay rate (low mdd)
+m1 <- 1
+#distance decay rate (high mdd)
+m2<-0.5
+#Run Simulation
+for (x in 1:10){
+  for (i in 1:(g_max-1)){ #for each generation
+  total<-spread[i,]+spreadhm[i,]
+  ratio<-spread[i,]/total
+  ratio[is.nan(ratio)] <- 0
+  seeds<-gNty(total)
+  seedsp1<-round(ratio*seeds)
+  seedsp2<-round((1-ratio)*seeds)
+  for (j in 1:patch){ #disperse seeds
+    seedsd1[j,]<-disperse2(seedsp1[j],j,m1)
+    seedsd2[j,]<-disperse2(seedsp2[j],j,m2)
+  }
+  spread[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
+  spreadhm[i+1,]<-apply(seedsd2,2,sum)
+  spreadttl[i+1,]<-spread[i+1,]+spreadhm[i+1,]
+  col1[i]<-lemove(spread[i+1,])#calculate how many patches the leading edge has advanced
+  col2[i]<-lemove(spreadhm[i+1,])
+  colt[i]<-lemove(spreadttl[i+1,])
+}
+plot(spread[2,], type="l", col="blue",ylim=c(0,100), xlab="Patch Distance from Origin", ylab="Number of Individuals")
+lines(spreadhm[2,], col="blue",lty=2)
+lines(spread[3,], col="blueviolet")
+lines(spreadhm[3,], col="blueviolet",lty=2)
+lines(spreadhm[4,], col="magenta",lty=2)
+lines(spread[4,], col="magenta")
+lines(spread[5,], col="red")
+lines(spreadhm[5,], col="red",lty=2)
+lines(spreadhm[6,], col="darkorange",lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[7,], col="brown", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[8,], col="darkgreen", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spread[8,], col="darkgreen")
+lines(spread[9,], col="green")
+lines(spreadhm[9,], col="green",lty=2)
+lines(spreadhm[10,], col="black",lty=2)
+lines(spread[10,], col="black")
+lines(spread[11,], col="blue")
+lines(spreadhm[11,], col="blue",lty=2)
+lines(spread[12,], col="blueviolet")
+lines(spreadhm[12,], col="blueviolet",lty=2)
+lines(spreadhm[13,], col="magenta",lty=2)
+lines(spread[13,], col="magenta")
+lines(spread[14,], col="red")
+lines(spreadhm[14,], col="red",lty=2)
+lines(spreadhm[15,], col="darkorange",lty=2)
+lines(spread[15,], col="darkorange")
+lines(spread[16,], col="brown")
+lines(spreadhm[16,], col="brown", lty=2)
+lines(spreadhm[17,], col="darkgreen", lty=2)
+lines(spread[17,], col="darkgreen")
+lines(spread[18,], col="green")
+lines(spreadhm[18,], col="green",lty=2)
+lines(spreadhm[19,], col="black",lty=2)
+lines(spread[19,], col="black")
+lines(spread[20,], col="blue")
+lines(spreadhm[20,], col="blue",lty=2)
+#legend("topleft", legend=c("Gen. 2", "Gen. 3", "Gen. 4", "Gen. 5", "Gen. 6", "Gen. 7", "Gen. 8", "Gen. 9", "Gen. 10"), col=c("blue","blueviolet","magenta","red","darkorange","brown","darkgreen","green","black"), lty=1, ncol=1,seg.len=1.3)
+legend("topright", legend=c("Low Dispersal Ability", "High Dispersal Ability"), lty=c(1,2))
+speedv1<-speed(col1,speedv1) #combine advances to get invasion velocity of leading edge
+speedv2<-speed(col2,speedv2)
+speedt<-speed(colt,speedt)
+plot(speedv2, type="l", xlab="Generation Number", ylab="Invasion Velocity (multiples of MDD)", lwd=2, col="red", ylim=c(0,10))
+lines(speedv1, col="blue", lwd=2)
+lines(speedt,lwd=2)
+legend("topright", legend=c("Total Population", "Smaller Starting Population", "Larger Starting Population"), col=c("black", "blue","red"), lty=1, seg.len=1.5)
+}
+```
+
+Finally, we can consider a case where the good dispersers are evolving. We start with the same dispersal ability as the poor dispersers, but increase it slightly in each generation.
+
+```{r, echo=FALSE}
+#distance decay rate (low mdd)
+m1 <- 1
+#distance decay rate (high mdd)
+m2<-1
+#Run Simulation
+for (x in 1:10){
+  m2<-1
+  for (i in 1:(g_max-1)){ #for each generation
+  total<-spread[i,]+spreadhm[i,]
+  ratio<-spread[i,]/total
+  ratio[is.nan(ratio)] <- 0
+  seeds<-gNty(total)
+  m2<-m2-0.02
+  seedsp1<-round(ratio*seeds)
+  seedsp2<-round((1-ratio)*seeds)
+  for (j in 1:patch){ #disperse seeds
+    seedsd1[j,]<-disperse2(seedsp1[j],j,m1)
+    seedsd2[j,]<-disperse2(seedsp2[j],j,m2)
+  }
+  spread[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
+  spreadhm[i+1,]<-apply(seedsd2,2,sum)
+  spreadttl[i+1,]<-spread[i+1,]+spreadhm[i+1,]
+  col1[i]<-lemove(spread[i+1,])#calculate how many patches the leading edge has advanced
+  col2[i]<-lemove(spreadhm[i+1,])
+  colt[i]<-lemove(spreadttl[i+1,])
+}
+plot(spread[2,], type="l", col="blue",ylim=c(0,100), xlab="Patch Distance from Origin", ylab="Number of Individuals")
+lines(spreadhm[2,], col="blue",lty=2)
+lines(spread[3,], col="blueviolet")
+lines(spreadhm[3,], col="blueviolet",lty=2)
+lines(spreadhm[4,], col="magenta",lty=2)
+lines(spread[4,], col="magenta")
+lines(spread[5,], col="red")
+lines(spreadhm[5,], col="red",lty=2)
+lines(spreadhm[6,], col="darkorange",lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[7,], col="brown", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[8,], col="darkgreen", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spread[8,], col="darkgreen")
+lines(spread[9,], col="green")
+lines(spreadhm[9,], col="green",lty=2)
+lines(spreadhm[10,], col="black",lty=2)
+lines(spread[10,], col="black")
+lines(spread[11,], col="blue")
+lines(spreadhm[11,], col="blue",lty=2)
+lines(spread[12,], col="blueviolet")
+lines(spreadhm[12,], col="blueviolet",lty=2)
+lines(spreadhm[13,], col="magenta",lty=2)
+lines(spread[13,], col="magenta")
+lines(spread[14,], col="red")
+lines(spreadhm[14,], col="red",lty=2)
+lines(spreadhm[15,], col="darkorange",lty=2)
+lines(spread[15,], col="darkorange")
+lines(spread[16,], col="brown")
+lines(spreadhm[16,], col="brown", lty=2)
+lines(spreadhm[17,], col="darkgreen", lty=2)
+lines(spread[17,], col="darkgreen")
+lines(spread[18,], col="green")
+lines(spreadhm[18,], col="green",lty=2)
+lines(spreadhm[19,], col="black",lty=2)
+lines(spread[19,], col="black")
+lines(spread[20,], col="blue")
+lines(spreadhm[20,], col="blue",lty=2)
+#legend("topleft", legend=c("Gen. 2", "Gen. 3", "Gen. 4", "Gen. 5", "Gen. 6", "Gen. 7", "Gen. 8", "Gen. 9", "Gen. 10"), col=c("blue","blueviolet","magenta","red","darkorange","brown","darkgreen","green","black"), lty=1, ncol=1,seg.len=1.3)
+legend("topright", legend=c("Non-Evolving Dispersal", "Evolving Dispersal"), lty=c(1,2))
+speedv1<-speed(col1,speedv1) #combine advances to get invasion velocity of leading edge
+speedv2<-speed(col2,speedv2)
+speedt<-speed(colt,speedt)
+plot(speedv2, type="l", xlab="Generation Number", ylab="Invasion Velocity (multiples of MDD)", lwd=2, col="red", ylim=c(0,10))
+lines(speedv1, col="blue", lwd=2)
+lines(speedt,lwd=2)
+legend("topright", legend=c("Total Population", "Evolving Dispersal", "Non-Evolving Dispersal"), col=c("black", "blue","red"), lty=1, seg.len=1.5)
+}
+```
+We can also consider a case where the two subpopulations do not differ in size, and do not have any difference in dispersal ability. It is likely that even when the dispersal ability does not vary, the two populations will not disperse with a homogeneous distribution across the landscape.
+```{r, echo=FALSE}
+#distance decay rate (low mdd)
+m1 <- 1
+#distance decay rate (high mdd)
+m2<-1
+#population 1 starting 
+N_0<-2
+#population 2 starting
+M_0<-2
+#Population Spread Matrix
+#Adds values to each row for each generation
+#Coloumns correspond to patches defined by dvect
+spread<-matrix(0,g_max,patch)
+spread[1,1]<-N_0
+spreadhm<-matrix(0,g_max,patch)
+spreadhm[1,1]<-M_0
+spreadttl<-matrix(0,g_max,patch)
+spreadttl[1,]<-spread[1,]+spreadhm[1,]
+#Run Simulation
+for (x in 1:10){
+  for (i in 1:(g_max-1)){ #for each generation
+  total<-spread[i,]+spreadhm[i,]
+  ratio<-spread[i,]/total
+  ratio[is.nan(ratio)] <- 0
+  seeds<-gNty(total)
+  seedsp1<-round(ratio*seeds)
+  seedsp2<-round((1-ratio)*seeds)
+  for (j in 1:patch){ #disperse seeds
+    seedsd1[j,]<-disperse2(seedsp1[j],j,m1)
+    seedsd2[j,]<-disperse2(seedsp2[j],j,m2)
+  }
+  spread[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
+  spreadhm[i+1,]<-apply(seedsd2,2,sum)
+  spreadttl[i+1,]<-spread[i+1,]+spreadhm[i+1,]
+  col1[i]<-lemove(spread[i+1,])#calculate how many patches the leading edge has advanced
+  col2[i]<-lemove(spreadhm[i+1,])
+   colt[i]<-lemove(spreadttl[i+1,])
+  }
+  
+plot(spread[2,], type="l", col="blue",ylim=c(0,100), xlab="Patch Distance from Origin", ylab="Number of Individuals")
+lines(spreadhm[2,], col="blue",lty=2)
+lines(spread[3,], col="blueviolet")
+lines(spreadhm[3,], col="blueviolet",lty=2)
+lines(spreadhm[4,], col="magenta",lty=2)
+lines(spread[4,], col="magenta")
+lines(spread[5,], col="red")
+lines(spreadhm[5,], col="red",lty=2)
+lines(spreadhm[6,], col="darkorange",lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[7,], col="brown", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spreadhm[8,], col="darkgreen", lty=2)
+lines(spread[6,], col="darkorange")
+lines(spread[7,], col="brown")
+lines(spread[8,], col="darkgreen")
+lines(spread[9,], col="green")
+lines(spreadhm[9,], col="green",lty=2)
+lines(spreadhm[10,], col="black",lty=2)
+lines(spread[10,], col="black")
+lines(spread[11,], col="blue")
+lines(spreadhm[11,], col="blue",lty=2)
+lines(spread[12,], col="blueviolet")
+lines(spreadhm[12,], col="blueviolet",lty=2)
+lines(spreadhm[13,], col="magenta",lty=2)
+lines(spread[13,], col="magenta")
+lines(spread[14,], col="red")
+lines(spreadhm[14,], col="red",lty=2)
+lines(spreadhm[15,], col="darkorange",lty=2)
+lines(spread[15,], col="darkorange")
+lines(spread[16,], col="brown")
+lines(spreadhm[16,], col="brown", lty=2)
+lines(spreadhm[17,], col="darkgreen", lty=2)
+lines(spread[17,], col="darkgreen")
+lines(spread[18,], col="green")
+lines(spreadhm[18,], col="green",lty=2)
+lines(spreadhm[19,], col="black",lty=2)
+lines(spread[19,], col="black")
+lines(spread[20,], col="blue")
+lines(spreadhm[20,], col="blue",lty=2)
+#legend("topleft", legend=c("Gen. 2", "Gen. 3", "Gen. 4", "Gen. 5", "Gen. 6", "Gen. 7", "Gen. 8", "Gen. 9", "Gen. 10"), col=c("blue","blueviolet","magenta","red","darkorange","brown","darkgreen","green","black"), lty=1, ncol=1,seg.len=1.3)
+legend("topright", legend=c("Population 1", "Population 2"), lty=c(1,2))
+speedv1<-speed(col1,speedv1) #combine advances to get invasion velocity of leading edge
+speedv2<-speed(col2,speedv2)
+speedt<-speed(colt,speedt)
+plot(speedv2, type="l", xlab="Generation Number", ylab="Invasion Velocity (multiples of MDD)", lwd=2, col="red", ylim=c(0,10))
+lines(speedv1, col="blue", lwd=2)
+lines(speedt,lwd=2)
+legend("topright", legend=c("Total Population", "Population 1", "Population 2"), col=c("black", "blue","red"), lty=1, seg.len=1.5)
+}
+
+```

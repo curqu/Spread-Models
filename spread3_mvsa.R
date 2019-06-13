@@ -4,20 +4,22 @@
 
 #intrinsic rate of increase 
 lambda <- 10
-#intraspecific competition
-alpha <- .1
+#intraspecific competition (competitive)
+alpha1 <- .1
+#intraspecific competition (less competitive)
+alpha2<- .4
 #distance decay rate (low mdd)
-m1 <- 1
+m1 <- 1.3
 #distance decay rate (high mdd)
-m2<-0.7
-#starting population (small m)
+m2<-1
+#starting population (competitive, bad dispersers)
 N_0 <- 10
-#starting population (big m)
-M_0<-2
+#starting population (less competitive, good dispersers)
+M_0<-10
 #number of generations to simulate 
 g_max <- 30
 #number of patches
-patch <- 50
+patch <- 100
 #distance between patches vector
 dpatch <- 1
 #Define distance vector (for now must be integer distances between patches)
@@ -28,7 +30,7 @@ dvect <- seq(from=0,length.out = patch,by=dpatch)
 #functions
 
 #seed production function
-gNty <- function(j,k){ #j is subpopulation, k is total
+gNty <- function(j,k,alpha){ #j is subpopulation, k is total, alpha is competition
   seeds<-vector()
   jnext<-(lambda*j)/(1+alpha*(k-1))
   seeds<-c(seeds,jnext)
@@ -141,12 +143,12 @@ speed<- function(x,y){ # x is vector of the leading edge patch each generation
 #Population Spread Matrix
 #Adds values to each row for each generation
 #Coloumns correspond to patches defined by dvect
-spread<-matrix(0,g_max,patch)
-spread[1,1]<-N_0
-spreadhm<-matrix(0,g_max,patch)
-spreadhm[1,1]<-M_0
+spreada<-matrix(0,g_max,patch)
+spreada[1,1]<-N_0
+spreadd<-matrix(0,g_max,patch)
+spreadd[1,1]<-M_0
 spreadttl<-matrix(0,g_max,patch)
-spreadttl[1,]<-spread[1,]+spreadhm[1,]
+spreadttl[1,]<-spreada[1,]+spreadd[1,]
 
 
 #Seeds Dispersed
@@ -189,22 +191,22 @@ speedt<-vector("numeric", g_max)
 #Run Simulation
 
 for (i in 1:(g_max-1)){ #for each generation
-  total<-spread[i,]+spreadhm[i,]
+  total<-spreada[i,]+spreadd[i,]
   # ratio<-spread[i,]/total
   # ratio[is.nan(ratio)] <- 0
-  seeds1<-gNty(spread[i,],total)
-  seeds2<-gNty(spreadhm[i,],total)
+  seeds1<-gNty(spreada[i,],total,alpha1)
+  seeds2<-gNty(spreadd[i,],total,alpha2)
   # seedsp1<-round(ratio*seeds)
   # seedsp2<-round((1-ratio)*seeds)
   for (j in 1:patch){ #disperse seeds
     seedsd1[j,]<-disperse(seeds1[j],j,m1)
     seedsd2[j,]<-disperse(seeds2[j],j,m2)
   }
-  spread[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
-  spreadhm[i+1,]<-apply(seedsd2,2,sum)
+  spreada[i+1,]<-apply(seedsd1,2,sum) #fill in next row in population matrix
+  spreadd[i+1,]<-apply(seedsd2,2,sum)
   spreadttl[i+1,]<-spread[i+1,]+spreadhm[i+1,]
-  col1[i]<-lemove(spread[i+1,])#calculate how many patches the leading edge has advanced
-  col2[i]<-lemove(spreadhm[i+1,])
+  col1[i]<-lemove(spreada[i+1,])#calculate how many patches the leading edge has advanced
+  col2[i]<-lemove(spreadd[i+1,])
   colt[i]<-lemove(spreadttl[i+1,])
   
 }
