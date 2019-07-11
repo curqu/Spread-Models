@@ -241,6 +241,14 @@ pmg1<-matrix(NA,nsim,g_max-1)
 # speedmn8<-vector("numeric",nsim)
 # speedmnt<-vector("numeric",nsim)
 
+# File names for storing data
+#NEED TO INITIALIZE FOR EACH SET OF SIMULATIONS
+
+#Final extent of spread 
+#FILE NAMES SHOULD BE OF THE FORM - tradeoffid_sim#.csv
+extent<-c("_01.csv","_02.csv")
+
+
 ####################################################################
 
 #Run Simulation 
@@ -306,6 +314,7 @@ for (x in 1:nsim){                       #for each simulation
   
   
   pmg1[x,]<-colt                       #fill in patches moved matrix
+  write.table(gmax_pop,file=extent[1])
   
   # speedv1<-speed(col1,speedv1) #combine advances to get invasion velocity of leading edge
   # speedv2<-speed(col2,speedv2)
