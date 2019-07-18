@@ -5,49 +5,58 @@
 # parameters
 
 #intrinsic rate of increase (lowest)
-lambda1 <- 35
+lambda1 <- lambdas15ch[1]
 #intrinsic rate of increase
-lambda2 <- 35
+lambda2 <- lambdas15ch[1]
 #intrinsic rate of increase
-lambda3 <- 35
+lambda3 <- lambdas15ch[1]
 #intrinsic rate of increase
-lambda4 <- 35
+lambda4 <- lambdas15ch[1]
 #intrinsic rate of increase
-lambda5 <- 35
+lambda5 <- lambdas15ch[1]
 #intrinsic rate of increase
-lambda6 <- 35
+lambda6 <- lambdas15ch[1]
 #intrinsic rate of increase
-lambda7 <- 35
+lambda7 <- lambdas15ch[1]
 #intrinsic rate of increase (highest)
-lambda8 <- 35
+lambda8 <- lambdas15ch[1]
 #intraspecific competition
-alpha <- .2
+alpha <- .1
 #distance decay rate (highest)
-m1 <- 0.5
+m1 <- mch[1]
 #distance decay rate 
-m2<-0.75
+m2<-mch[1]
 #distance decay rate 
-m3<-1.25
+m3<-mch[1]
 #distance decay rate 
-m4<-1.75
+m4<-mch[1]
 #distance decay rate 
-m5<-2.25
+m5<-mch[1]
 #distance decay rate 
-m6<-2.75
+m6<-mch[1]
 #distance decay rate 
-m7<-3.25
+m7<-mch[1]
 #distance decay rate 
-m8<-3.75
+m8<-mch[1]
 #starting population for each strategy
-N_0 <- 2
+N_0 <- 1
 # number of simulations to run
 nsim<-1
 #number of generations to simulate 
-g_max <- 10
+g_max <- 100
 #distance between patches vector
 dpatch <- 1
 #Define distance vector (for now must be integer distances between patches)
+#homogeneous
 dvect <- seq(from=0,length.out = 50,by=dpatch)
+#length 2 patches
+dvect <- c(0,cumsum(rep(c(1,3),90)))
+#length 4 patches
+dvect <-  c(0,cumsum(rep(c(1,1,1,5),55)))
+#length 6 patches
+dvect <-  c(0,cumsum(rep(c(1,1,1,1,1,7),35)))
+#number of patches
+patch <- length(dvect)
 #number of patches
 patch <- length(dvect)
 # p1<-seq(from=0,length.out=3,by=1)
@@ -198,6 +207,7 @@ for (i in 1:patch){
     pwdist[i,j]<-dvect[j]-dvect[i]
   }
 }
+
 #matrix for the last generation of spread 
 gmax_pop<-matrix(NA,8,patch)
 #Vector for the extent of each strategy
@@ -392,7 +402,8 @@ mppg1<-apply(pmg1,2,mean)                #compute mean advance each gen.
 
 #Plot barplotbarplot of winning strategy each simulation
 barplot(wsc, space=0, names.arg=c("Dispersive","","","","","","","Fecund"), 
-        main="Strategy at the Leading Edge", sub="Count Over all Simulations", ylab="Number of Invasions", ylim=c(0,25))
+        main="Strategy at the Leading Edge", sub="Count Over all Simulations", 
+        ylab="Number of Invasions", ylim=c(0,25))
 
 #Plot the advance across replicates + mean
 plot(pmg1[1,],main="Movement of Leading Edge over 20 Generations",ylab="Distance from Starting Patch", xlab="Generation",
