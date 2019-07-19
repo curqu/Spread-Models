@@ -5,58 +5,92 @@
 # parameters
 
 #intrinsic rate of increase (lowest)
-lambda1 <- lambdas15ch[1]
+lambda1 <- lambdas15[1]
 #intrinsic rate of increase
-lambda2 <- lambdas15ch[1]
+lambda2 <- lambdas15[2]
 #intrinsic rate of increase
-lambda3 <- lambdas15ch[1]
+lambda3 <- lambdas15[3]
 #intrinsic rate of increase
-lambda4 <- lambdas15ch[1]
+lambda4 <- lambdas15[4]
 #intrinsic rate of increase
-lambda5 <- lambdas15ch[1]
+lambda5 <- lambdas15[5]
 #intrinsic rate of increase
-lambda6 <- lambdas15ch[1]
+lambda6 <- lambdas15[6]
 #intrinsic rate of increase
-lambda7 <- lambdas15ch[1]
+lambda7 <- lambdas15[7]
+#intrinsic rate of increase
+lambda8 <- lambdas15[8]
+#intrinsic rate of increase
+lambda9 <- lambdas15[9]
+#intrinsic rate of increase
+lambda10 <- lambdas15[10]
+#intrinsic rate of increase
+lambda11 <- lambdas15[11]
+#intrinsic rate of increase
+lambda12 <- lambdas15[12]
+#intrinsic rate of increase
+lambda13 <- lambdas15[13]
+#intrinsic rate of increase
+lambda14 <- lambdas15[14]
+#intrinsic rate of increase
+lambda15 <- lambdas15[15]
 #intrinsic rate of increase (highest)
-lambda8 <- lambdas15ch[1]
+lambda16 <- lambdas15[16]
 #intraspecific competition
 alpha <- .1
 #distance decay rate (highest)
-m1 <- mch[1]
+m1 <- m[1]
 #distance decay rate 
-m2<-mch[1]
+m2<-m[2]
 #distance decay rate 
-m3<-mch[1]
+m3<-m[3]
 #distance decay rate 
-m4<-mch[1]
+m4<-m[4]
 #distance decay rate 
-m5<-mch[1]
+m5<-m[5]
 #distance decay rate 
-m6<-mch[1]
+m6<-m[6]
 #distance decay rate 
-m7<-mch[1]
+m7<-m[7]
 #distance decay rate 
-m8<-mch[1]
+m8<-m[8]
+#distance decay rate
+m9 <- m[9]
+#distance decay rate 
+m10<-m[10]
+#distance decay rate 
+m11<-m[11]
+#distance decay rate 
+m12<-m[12]
+#distance decay rate 
+m13<-m[13]
+#distance decay rate 
+m14<-m[14]
+#distance decay rate 
+m15<-m[15]
+#distance decay rate (lowest)
+m16<-m[16]
+#number of strategies 
+strat_t<-16
 #starting population for each strategy
 N_0 <- 1
 # number of simulations to run
 nsim<-1
 #number of generations to simulate 
-g_max <- 100
+g_max <- 50
 #distance between patches vector
 dpatch <- 1
 #Define distance vector (for now must be integer distances between patches)
 #homogeneous
-dvect <- seq(from=0,length.out = 50,by=dpatch)
+dvect_0 <- seq(from=0,length.out = 50,by=dpatch)
 #length 2 patches
-dvect <- c(0,cumsum(rep(c(1,3),90)))
+dvect_2 <- c(0,cumsum(rep(c(1,3),90)))
 #length 4 patches
-dvect <-  c(0,cumsum(rep(c(1,1,1,5),55)))
+dvect_4 <-  c(0,cumsum(rep(c(1,1,1,5),55)))
 #length 6 patches
-dvect <-  c(0,cumsum(rep(c(1,1,1,1,1,7),35)))
-#number of patches
-patch <- length(dvect)
+dvect_6 <-  c(0,cumsum(rep(c(1,1,1,1,1,7),35)))
+#length 8 patches
+dvect_8<- c(0,cumsum(rep(c(1,1,1,1,1,1,1,9),20)))
 #number of patches
 patch <- length(dvect)
 # p1<-seq(from=0,length.out=3,by=1)
@@ -172,8 +206,24 @@ spread7<-matrix(0,g_max,patch)
 spread7[1,1]<-N_0
 spread8<-matrix(0,g_max,patch)
 spread8[1,1]<-N_0
+spread9<-matrix(0,g_max,patch)
+spread9[1,1]<-N_0
+spread10<-matrix(0,g_max,patch)
+spread10[1,1]<-N_0
+spread11<-matrix(0,g_max,patch)
+spread11[1,1]<-N_0
+spread12<-matrix(0,g_max,patch)
+spread12[1,1]<-N_0
+spread13<-matrix(0,g_max,patch)
+spread13[1,1]<-N_0
+spread14<-matrix(0,g_max,patch)
+spread14[1,1]<-N_0
+spread15<-matrix(0,g_max,patch)
+spread15[1,1]<-N_0
+spread16<-matrix(0,g_max,patch)
+spread16[1,1]<-N_0
 spreadttl<-matrix(0,g_max,patch)
-spreadttl[1,1]<-N_0*8
+spreadttl[1,1]<-N_0*strat_t
 
 
 #Seeds Dispersed
@@ -186,6 +236,15 @@ seeds5<-vector("numeric",patch)
 seeds6<-vector("numeric",patch)
 seeds7<-vector("numeric",patch)
 seeds8<-vector("numeric",patch)
+seeds9<-vector("numeric", patch)
+seeds10<-vector("numeric",patch)
+seeds11<-vector("numeric",patch)
+seeds12<-vector("numeric",patch)
+seeds13<-vector("numeric",patch)
+seeds14<-vector("numeric",patch)
+seeds15<-vector("numeric",patch)
+seeds16<-vector("numeric",patch)
+
 #matrix containing number of plants/seeds in each patch after dispersal
 #rows are originating patches where seeds were produced,
 #coloumns are where they disperse to
@@ -197,6 +256,14 @@ seedsd5<-matrix(0,patch,patch)
 seedsd6<-matrix(0,patch,patch)
 seedsd7<-matrix(0,patch,patch)
 seedsd8<-matrix(0,patch,patch)
+seedsd9<-matrix(0,patch,patch)
+seedsd10<-matrix(0,patch,patch)
+seedsd11<-matrix(0,patch,patch)
+seedsd12<-matrix(0,patch,patch)
+seedsd13<-matrix(0,patch,patch)
+seedsd14<-matrix(0,patch,patch)
+seedsd15<-matrix(0,patch,patch)
+seedsd16<-matrix(0,patch,patch)
 
 #Pairwise Distances Matrix
 #Distances between patch i,j for row i 
@@ -209,11 +276,11 @@ for (i in 1:patch){
 }
 
 #matrix for the last generation of spread 
-gmax_pop<-matrix(NA,8,patch)
+gmax_pop<-matrix(NA,strat_t,patch)
 #Vector for the extent of each strategy
-ledge<-vector("numeric",8)
+ledge<-vector("numeric",strat_t)
 # Vector counting winning strategy
-wsc<-vector("numeric",8)
+wsc<-vector("numeric",strat_t)
 
 # vectors for storing colonized patches
 #   col1<-vector("numeric", g_max-1)
@@ -273,6 +340,14 @@ for (x in 1:nsim){                       #for each simulation
     seeds6<-gNty(spread6[i,],total,lambda6)
     seeds7<-gNty(spread7[i,],total,lambda7)
     seeds8<-gNty(spread8[i,],total,lambda8)
+    seeds9<-gNty(spread9[i,],total,lambda9) 
+    seeds10<-gNty(spread10[i,],total,lambda10)
+    seeds11<-gNty(spread11[i,],total,lambda11)
+    seeds12<-gNty(spread12[i,],total,lambda12)
+    seeds13<-gNty(spread13[i,],total,lambda13)
+    seeds14<-gNty(spread14[i,],total,lambda14)
+    seeds15<-gNty(spread15[i,],total,lambda15)
+    seeds16<-gNty(spread16[i,],total,lambda16)
     
     for (j in 1:patch){                     #disperse seeds
       seedsd1[j,]<-disperse(seeds1[j],j,m1)
@@ -283,6 +358,14 @@ for (x in 1:nsim){                       #for each simulation
       seedsd6[j,]<-disperse(seeds6[j],j,m6)
       seedsd7[j,]<-disperse(seeds7[j],j,m7)
       seedsd8[j,]<-disperse(seeds8[j],j,m8)
+      seedsd9[j,]<-disperse(seeds9[j],j,m9)
+      seedsd10[j,]<-disperse(seeds10[j],j,m10)
+      seedsd11[j,]<-disperse(seeds11[j],j,m11)
+      seedsd12[j,]<-disperse(seeds12[j],j,m12)
+      seedsd13[j,]<-disperse(seeds13[j],j,m13)
+      seedsd14[j,]<-disperse(seeds14[j],j,m14)
+      seedsd15[j,]<-disperse(seeds15[j],j,m15)
+      seedsd16[j,]<-disperse(seeds16[j],j,m16)
     }
     spread1[i+1,]<-apply(seedsd1,2,sum)     #fill in next row in population matrix
     spread2[i+1,]<-apply(seedsd2,2,sum)
@@ -292,7 +375,16 @@ for (x in 1:nsim){                       #for each simulation
     spread6[i+1,]<-apply(seedsd6,2,sum)
     spread7[i+1,]<-apply(seedsd7,2,sum)
     spread8[i+1,]<-apply(seedsd8,2,sum)
-    spreadttl[i+1,]<-spread1[i+1,]+spread2[i+1,]+spread3[i+1,]+spread4[i+1,]+spread5[i+1,]+spread6[i+1,]+spread7[i+1,]+spread8[i+1,]
+    spread9[i+1,]<-apply(seedsd9,2,sum)     #fill in next row in population matrix
+    spread10[i+1,]<-apply(seedsd10,2,sum)
+    spread11[i+1,]<-apply(seedsd11,2,sum)
+    spread12[i+1,]<-apply(seedsd12,2,sum)
+    spread13[i+1,]<-apply(seedsd13,2,sum)
+    spread14[i+1,]<-apply(seedsd14,2,sum)
+    spread15[i+1,]<-apply(seedsd15,2,sum)
+    spread16[i+1,]<-apply(seedsd16,2,sum)
+    spreadttl[i+1,]<-spread1[i+1,]+spread2[i+1,]+spread3[i+1,]+spread4[i+1,]+spread5[i+1,]+spread6[i+1,]+spread7[i+1,]+spread8[i+1,]+
+      spread9[i+1,]+spread10[i+1,]+spread11[i+1,]+spread12[i+1,]+spread13[i+1,]+spread14[i+1,]+spread15[i+1,]+spread16[i+1,]
     
     
     # col1[i]<-lemove(spread1[i+1,])#calculate how many patches the leading edge has advanced
@@ -313,18 +405,26 @@ for (x in 1:nsim){                       #for each simulation
     gmax_pop[6,]<-spread6[g_max,]
     gmax_pop[7,]<-spread7[g_max,]
     gmax_pop[8,]<-spread8[g_max,]
+    gmax_pop[9,]<-spread9[g_max,]
+    gmax_pop[10,]<-spread10[g_max,]
+    gmax_pop[11,]<-spread11[g_max,]
+    gmax_pop[12,]<-spread12[g_max,]
+    gmax_pop[13,]<-spread13[g_max,]
+    gmax_pop[14,]<-spread14[g_max,]
+    gmax_pop[15,]<-spread15[g_max,]
+    gmax_pop[16,]<-spread16[g_max,]
   }
-  for (i in 1:8){
-    ledge[i]<-lemove(gmax_pop[i,])
-  }
-  for (i in 1:8){
-    if (max(ledge)==ledge[i])
-      wsc[i]<-wsc[i]+1
-  }
-  
-  
-  pmg1[x,]<-colt                       #fill in patches moved matrix
-  write.table(gmax_pop,file=extent[1])
+  # for (i in 1:strat_t){
+  #   ledge[i]<-lemove(gmax_pop[i,])
+  # }
+  # for (i in 1:strat_t){
+  #   if (max(ledge)==ledge[i])
+  #     wsc[i]<-wsc[i]+1
+  # }
+  # 
+  # 
+  # pmg1[x,]<-colt                       #fill in patches moved matrix
+  # write.table(gmax_pop,file=extent[1])
   
   # speedv1<-speed(col1,speedv1) #combine advances to get invasion velocity of leading edge
   # speedv2<-speed(col2,speedv2)
@@ -346,15 +446,27 @@ for (x in 1:nsim){                       #for each simulation
   # speedmt<-mean(speedt)
   
   #Plot the distribution of strategies at the last generation
-  plot(spread1[g_max,], type="l", col="red",ylim=c(0,300),main="Population after 20 Generations of Spread",  xlab="Patch Distance from Origin", ylab="Number of Individuals",lwd=2)
-  lines(spread2[g_max,], col="darkorange",lwd=2)
-  lines(spread3[g_max,], col="goldenrod",lwd=2)
-  lines(spread4[g_max,], col="yellowgreen",lwd=2)
-  lines(spread5[g_max,], col="springgreen2",lwd=2)
-  lines(spread6[g_max,], col="turquoise3",lwd=2)
-  lines(spread7[g_max,], col="royalblue2",lwd=2)
-  lines(spread8[g_max,], col="navy",lwd=2)
-  legend("topright", legend=c("Dispersive", "","","","","","", " Fecund"),col=c("red","darkorange","goldenrod","yellowgreen","springgreen2","turquoise3","royalblue2","  navy"), lty=1,seg.len = 1,y.intersp = 0.5)
+  plot(spread1[g_max,], type="l", col="hotpink",ylim=c(0,300),main="Population after 20 Generations of Spread", 
+       xlab="Patch Distance from Origin", ylab="Number of Individuals",lwd=2)
+  lines(spread2[g_max,], col="violetred",lwd=2)
+  lines(spread3[g_max,], col="firebrick",lwd=2)
+  lines(spread4[g_max,], col="red",lwd=2)
+  lines(spread5[g_max,], col="darkorange",lwd=2)
+  lines(spread6[g_max,], col="tan1",lwd=2)
+  lines(spread7[g_max,], col="goldenrod1",lwd=2)
+  lines(spread8[g_max,], col="yellow3",lwd=2)
+  lines(spread9[g_max,], col="yellowgreen",lwd=2)
+  lines(spread10[g_max,], col="springgreen1",lwd=2)
+  lines(spread11[g_max,], col="forestgreen",lwd=2)
+  lines(spread12[g_max,], col="darkturquoise",lwd=2)
+  lines(spread13[g_max,], col="deepskyblue1",lwd=2)
+  lines(spread14[g_max,], col="royalblue2",lwd=2)
+  lines(spread15[g_max,], col="mediumblue",lwd=2)
+  lines(spread16[g_max,], col="navy",lwd=2)
+  legend("topright", legend=c("Dispersive", "","","","","","","","","","","","","","", "Fecund"),
+         col=c("hotpink","violetred","firebrick","red","darkorange","tan1","goldenrod1","yellow3","yellowgreen",
+               "springgreen1","forestgreen","darkturquoise","deepskyblue1","royalblue2","mediumblue","navy"),
+         lty=1,seg.len = 1,y.intersp = 0.5)
   
   # speedv1<-speed(col1,speedv1) #combine advances to get invasion velocity of leading edge
   # speedv2<-speed(col2,speedv2)
