@@ -4,13 +4,13 @@
 
 # parameters
 
-#CHANGE
+## THESE NEED TO BE UPDATED EACH MODEL RUN from parameter setup file -- can load into .Rdata first
 #intrinsic rate of increase
 lambda <- lambda.high
 #landscape
 dvect<-dvect_8
 
-#don't change
+# THESE DO NOT CHANGE,keep static for all simulation sets
 #distance decay rate of dispersal kernel
 m<-m
 #intraspecific competition
@@ -20,7 +20,7 @@ strat_t<-16
 #starting population for each strategy
 N_0 <- 3
 #number of simulations to run
-nsim<-1
+nsim<-1000
 #number of generations to simulate 
 g_max <- 40
 #number of suitable patches
@@ -30,28 +30,40 @@ patch <- length(dvect)
 ##########################################################
 
 #functions
+# here all all the functions used in simulations, main functions are denoted by three pound signs,
+# helper functions by two pounds.
 
-#seed production function
+### seed production function
+# Beverton-Holt model of density dependent growth, modified to consider all individuals in a patch 
+# as competitors, but only the relevant subpopulation for growth rate
+# computed for each strategy population j across the landscape of n patches (vectorized)
 
 gNty <- function(j,k,lambda){ 
-  # j is subpopulation of strategy, 
-  # k is total population
-  # lambda is reproductuve rate at low density
+  # j is number of individuals belonging to strategy j in patch x in 1:n, 
+  # k is total population of all strategies in patch x in 1:n
+  # lambda is reproductuve rate at low density of strategy j
+  # first create a vector to store seeds 
   seeds<-vector()
-  jnext<-(lambda*j)/(1+alpha*(k-1))
-  seeds<-c(seeds,jnext)
+  # compute Beverton-Holt population growth model
+  seeds<-(lambda*j)/(1+alpha*(k-1))
+  # round results to represent discrete individuals
   return(round(seeds,0))
 }
 
-#dispersal function 
+### dispersal function 
+# move seeds in patch x to patch y according to exponential dispersal kernel
+# with random direction (forward & back)
 
 disperse<-function(x,y,m){ 
-  # x is the number of seeds in the patch
-  # y is the coloumn index of the patch 
+  # x is the number of seeds in the patch to disperse
+  # y is the row index of the patch in pair-wise distance matrix
   # m is the parameter defining the dispersal kernel
+  # first define a vector to store dispersal distances
   pmove<-vector("numeric", patch)
+  # if there are no seeds in patch x, return the empty vector
   if (x==0)
     return(pmove)
+  # otherwise, compute distance and direction with helper functions below
   else
     move<-distance(x,m)*direction(x)
   for (i in 1:x){ 
@@ -65,28 +77,40 @@ disperse<-function(x,y,m){
   }
   return(pmove) 
 }
-# dispersal helper -- generate random distances, parameters are from disperse
+
+## helper function for disperse-- generate random distances, 
+# parameters are from disperse function:
+# x is the number of seeds in the patch
+# m is the defined dispersal kernel parameter
 distance<-function(x,m){
+  # generate x random variates from exponental kernel with rate=m
   dist<-round(rexp(x,m),0)
   return(dist)
 }
-# dispersal helper -- generate random directions,x is as disperse
+
+## helper function for disperse-- generate random directions,
+# x is from disperse, number of seeds in patch
 direction<-function(x){
+  # draw x random variates from binomial distribution with p=0.5
   dir<-rbinom(x,1,0.5)
+  # refactor results so that 0's return -1 to indicate negative direction
+  # (disperse backwards/leftwards)
   sapply(dir,refactor)
 }
-#direction helper -- refactor 0 to -1
+
+## helper for direction-- refactor 0 to -1
 refactor<-function(x){ 
-  #  x is values from binomial distribution 
+  #  x is values from binomial distribution in direction
   if (x==0)
     x<- -1
   else x
 }
 
-#find the leading edge patch
+### find the leading edge patch to record speed of advance
 
 lemove<-function(x){ 
-  #x is the row in spread matrix corresponding to time t
+  # x is the row in spread matrix corresponding to time t
+  # compute the 
   moved<-patch-pleft(rev(x))
   if (moved == 0){
     return(moved)
@@ -99,19 +123,24 @@ lemove<-function(x){
 }
 #lemove helper how many patches left to colonize
 pleft<-function(x){ 
-  # x is from lemove 
+  # x is from lemove, the row in spread matrix corresponding to time t
+  # note we reverse the order so the first value in x corresponds to the right-most patch 
+  # set index value y -- counts how far from the rightmost patch the leading edge is
   y<-0
+  # for each patch, check if there is a non-zero population
   for (k in 1:patch){
     if (x[k] != 0){
+      # halt once we reach the leading edge
       break
     }
+    # otherwise, add one to the index
     else y<-y+1
   }
   return(y)
 }
 
-# calculate how many patches the leading edge moves each generation
-# assumes that only one patch is colonized at start
+### calculate how many patches the leading edge moves each generation
+# note this function assumes that only one patch is colonized at start
 speed<- function(x,y){ 
   # x is vector of the leading edge patch each generation
   # y is the output vector, showing the number of patches the leading edge moved
@@ -213,9 +242,9 @@ seedsd14<-matrix(0,patch,patch)
 seedsd15<-matrix(0,patch,patch)
 seedsd16<-matrix(0,patch,patch)
 
-#Pairwise Distances Matrix
-#Distances between patch i,j for row i 
-#and coloumn j
+# Pairwise Distances Matrix for computing dispersal
+# Distances between patch i,j for row i 
+# and coloumn j
 pwdist<-matrix(NA,patch,patch)
 for (i in 1:patch){
   for (j in 1:patch){
@@ -223,7 +252,7 @@ for (i in 1:patch){
   }
 }
 
-#matrix for the last generation of spread 
+#matrix for storing data from the last generation of spread 
 gmax_pop<-matrix(NA,strat_t,patch)
 #Vector for the extent of each strategy
 ledge<-vector("numeric",strat_t)
