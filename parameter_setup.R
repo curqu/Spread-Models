@@ -4,10 +4,10 @@
 ###########################################################################
 
 #Trade-off function
-set_curve <- function(c,m,d){   # c is a co-efficient to set maximum lambda
+set_curve <- function(c,m,d){   
+  # c is a co-efficient to set maximum lambda
   # m is the input dispersal parameter
   # d is the exponent, defines the shape of the curve
-  # k sets the minimum lambda
   lambda<-c*((m)/2)^d
   return(lambda)
 }
@@ -19,8 +19,11 @@ m<-c(0.702,0.78,0.86,0.94,1.02,1.1,1.18,1.26,1.34,1.42,1.5,1.58,1.66,1.74,1.82,1
 ################################################################################
 # LAMBDAS
 
+# set the weak trade-off curve with parameters defined above, d=0.25
 lambda.low<-set_curve(c,m,0.25)
+# set the medium trade-off curve, d=0.6
 lambda.mid<-set_curve(c,m,0.6)
+# set the strong trade-off curve, d=1.25
 lambda.high<-set_curve(c,m,1.25)
 
 ################################################################################
@@ -28,7 +31,7 @@ lambda.high<-set_curve(c,m,1.25)
 
 #distance between patches vector
 dpatch <- 1
-#Define distance vector (for now must be integer distances between patches)
+#Define distance vector (must be integer distances between patches)
 #homogeneous
 dvect_0 <- seq(from=0,length.out = 300,by=dpatch)
 #length 2 patches
@@ -40,14 +43,19 @@ dvect_6 <-  c(0,cumsum(rep(c(1,1,1,1,1,7),35)))
 #length 8 patches
 dvect_8<- c(0,cumsum(rep(c(1,1,1,1,1,1,1,9),20)))
 
+# note that single patch landscape vectors need to be commited from office PC when accessible!
+
 ###################################################################################
 # DATA FILENAMES                                                                  #
 ###################################################################################
 
+# create a list of filenames to assign simulation data
+#FILE NAMES SHOULD BE OF THE FORM - spd_tradeoffid_landscapeid_sim#.csv
+
 ## CONTINUOUS LANDSCAPE
 
 #Patches colonized each generation
-#FILE NAMES SHOULD BE OF THE FORM - spd_tradeoffid_landscapeid_sim#.csv
+
 
 spdfiles_low_0<-c("spd_low_0_001.csv","spd_low_0_002.csv","spd_low_0_003.csv","spd_low_0_004.csv","spd_low_0_005.csv",
                   "spd_low_0_006.csv","spd_low_0_007.csv","spd_low_0_008.csv","spd_low_0_009.csv","spd_low_0_010.csv",
